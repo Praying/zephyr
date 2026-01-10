@@ -1,0 +1,87 @@
+# Zephyr Cargo Configuration
+
+[build]
+# Use all available CPU cores for compilation
+jobs = -1
+
+# Incremental compilation for faster rebuilds
+incremental = true
+
+[target.x86_64-unknown-linux-gnu]
+# Linux-specific optimizations
+rustflags = [
+    "-C", "target-cpu=native",
+    "-C", "link-arg=-fuse-ld=lld",
+]
+
+[target.x86_64-apple-darwin]
+# macOS Intel optimizations
+rustflags = [
+    "-C", "target-cpu=native",
+]
+
+[target.aarch64-apple-darwin]
+# macOS Apple Silicon optimizations
+rustflags = [
+    "-C", "target-cpu=native",
+]
+
+[target.x86_64-pc-windows-msvc]
+# Windows optimizations
+rustflags = [
+    "-C", "target-cpu=native",
+]
+
+[alias]
+# Custom cargo aliases for development workflow
+b = "build"
+c = "check"
+t = "test"
+r = "run"
+br = "build --release"
+tr = "test --release"
+rr = "run --release"
+
+# Clippy with all warnings
+lint = "clippy --all-targets --all-features -- -D warnings"
+
+# Format check
+fmt-check = "fmt --all -- --check"
+
+# Run all checks (format, lint, test)
+ci = ["fmt-check", "lint", "test"]
+
+# Documentation
+doc = "doc --no-deps --document-private-items"
+
+# Benchmark
+bench = "bench --all-features"
+
+[env]
+# Default log level for development
+RUST_LOG = { value = "info,zephyr=debug", force = false }
+
+# Backtrace for debugging
+RUST_BACKTRACE = { value = "1", force = false }
+
+[net]
+# Git fetch with CLI for better performance
+git-fetch-with-cli = true
+
+# Retry network operations
+retry = 3
+
+[registries.crates-io]
+protocol = "sparse"
+
+[profile.dev.package."*"]
+# Optimize dependencies even in dev mode for faster runtime
+opt-level = 2
+
+[profile.dev.package.proptest]
+# Optimize proptest for faster property testing
+opt-level = 2
+
+[profile.dev.package.rand]
+# Optimize rand for faster random generation in tests
+opt-level = 2

@@ -1,0 +1,30 @@
+[package]
+name = "zephyr-data"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Data storage and management for Zephyr trading system"
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+lz4_flex.workspace = true
+crc32fast.workspace = true
+memmap2.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+rust_decimal_macros.workspace = true
+rust_decimal.workspace = true
+
+[lints]
+workspace = true

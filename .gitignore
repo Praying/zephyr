@@ -1,0 +1,76 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Data files
+data/
+*.dat
+*.bin
+
+# Configuration with secrets
+config/secrets.yaml
+config/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.mypy_cache/
+.pytest_cache/
+
+# Coverage
+*.gcno
+*.gcda
+*.gcov
+coverage/
+lcov.info
+tarpaulin-report.html
+
+# Benchmarks
+criterion/
+
+# Documentation build
+/doc/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+.specify/
+_bmad/
+_bmad-output/
+.kiro/
+.claude/
+.opencode/
+.roo/
+specs/
+target/

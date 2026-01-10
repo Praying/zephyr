@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --z-bg-primary: #ffffff;
+  --z-bg-secondary: #f5f7fa;
+  --z-text-primary: #303133;
+  --z-text-secondary: #606266;
+  --z-border-color: #dcdfe6;
+  --z-profit-color: #10b981;
+  --z-loss-color: #ef4444;
+}
+
+html.dark {
+  --z-bg-primary: #141414;
+  --z-bg-secondary: #1d1d1d;
+  --z-text-primary: #e5eaf3;
+  --z-text-secondary: #a3a6ad;
+  --z-border-color: #4c4d4f;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: var(--z-bg-secondary);
+  color: var(--z-text-primary);
+}
+
+// Custom scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--z-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--z-border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--z-text-secondary);
+}
+
+// Utility classes
+.profit {
+  color: var(--z-profit-color);
+}
+
+.loss {
+  color: var(--z-loss-color);
+}
+
+.card {
+  background-color: var(--z-bg-primary);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+// Element Plus overrides
+.el-menu {
+  border-right: none !important;
+}
+
+.el-table {
+  --el-table-border-color: var(--z-border-color);
+}

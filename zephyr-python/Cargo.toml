@@ -1,0 +1,29 @@
+[package]
+name = "zephyr-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Python bindings for Zephyr trading system"
+
+[lib]
+name = "zephyr_py"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+zephyr-engine = { path = "../zephyr-engine" }
+pyo3 = { workspace = true, features = ["extension-module", "abi3-py310"] }
+numpy.workspace = true
+tokio.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+
+[build-dependencies]
+pyo3-build-config = "0.23"
+
+[lints]
+workspace = true

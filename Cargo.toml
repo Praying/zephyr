@@ -1,0 +1,136 @@
+[workspace]
+resolver = "2"
+members = [
+    "zephyr-core",
+    "zephyr-data",
+    "zephyr-engine",
+    "zephyr-gateway",
+    "zephyr-risk",
+    "zephyr-backtest",
+    "zephyr-python",
+    "zephyr-api",
+    "zephyr-cli",
+    "zephyr-server",
+    "zephyr-telemetry",
+    "zephyr-security",
+    "zephyr-benchmark",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+authors = ["Praying<snowfallvilla@163.com>"]
+license = "MIT"
+repository = "https://github.com/Praying/zephyr"
+description = "cryptocurrency quantitative trading system"
+
+[workspace.dependencies]
+# Core dependencies
+rust_decimal = { version = "1.36", features = ["serde", "serde-with-str"] }
+rust_decimal_macros = "1.36"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# Async runtime
+tokio = { version = "1.42", features = ["full", "tracing"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
+async-trait = "0.1"
+
+# Web framework
+axum = { version = "0.8", features = ["ws", "macros"] }
+tower = { version = "0.5", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+
+# WebSocket and HTTP clients
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+tracing-appender = "0.2"
+
+# Metrics
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+
+# Cryptography and security
+ring = "0.17"
+argon2 = "0.5"
+zeroize = { version = "1.8", features = ["derive"] }
+jsonwebtoken = "9.3"
+
+# Data storage
+lz4_flex = "0.11"
+crc32fast = "1.4"
+memmap2 = "0.9"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono"] }
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+
+# Utilities
+uuid = { version = "1.11", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+humantime = "2.1"
+humantime-serde = "1.1"
+parking_lot = "0.12"
+dashmap = "6.1"
+bytes = "1.9"
+url = "2.5"
+base64 = "0.22"
+hex = "0.4"
+hmac = "0.12"
+sha2 = "0.10"
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Testing
+proptest = "1.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Python bindings (optional)
+pyo3 = { version = "0.23", features = ["extension-module"] }
+numpy = "0.23"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+# Allow some pedantic lints that are too strict
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+missing_const_for_fn = "allow"
+cargo_common_metadata = "allow"
+multiple_crate_versions = "allow"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+[profile.bench]
+inherits = "release"
+debug = true

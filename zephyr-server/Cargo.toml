@@ -1,0 +1,52 @@
+[package]
+name = "zephyr-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Main server entry point for Zephyr trading system"
+
+[[bin]]
+name = "zephyr-server"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+zephyr-core = { path = "../zephyr-core" }
+zephyr-data = { path = "../zephyr-data" }
+zephyr-engine = { path = "../zephyr-engine" }
+zephyr-gateway = { path = "../zephyr-gateway" }
+zephyr-risk = { path = "../zephyr-risk" }
+zephyr-api = { path = "../zephyr-api" }
+zephyr-telemetry = { path = "../zephyr-telemetry" }
+
+# Async runtime
+tokio.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+toml.workspace = true
+
+# Logging
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# CLI
+clap.workspace = true
+
+# Utilities
+dashmap.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

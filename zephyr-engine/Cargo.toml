@@ -1,0 +1,39 @@
+[package]
+name = "zephyr-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Trading engine and strategy execution for Zephyr trading system"
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+zephyr-data = { path = "../zephyr-data" }
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+parking_lot.workspace = true
+dashmap.workspace = true
+tracing.workspace = true
+rust_decimal.workspace = true
+humantime-serde.workspace = true
+chrono.workspace = true
+crossbeam-queue = "0.3"
+uuid = { version = "1.0", features = ["v4"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+rust_decimal_macros.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tracing-subscriber = "0.3"
+
+[[example]]
+name = "run_dual_thrust"
+path = "examples/run_dual_thrust.rs"
+
+[lints]
+workspace = true

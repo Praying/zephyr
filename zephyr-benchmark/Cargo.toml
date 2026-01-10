@@ -1,0 +1,40 @@
+[package]
+name = "zephyr-benchmark"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Performance benchmarking framework for Zephyr trading system"
+
+[dependencies]
+# Core dependencies
+zephyr-core = { path = "../zephyr-core" }
+zephyr-telemetry = { path = "../zephyr-telemetry" }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["sync", "time", "rt"] }
+
+# Time and statistics
+chrono.workspace = true
+
+# Utilities
+parking_lot.workspace = true
+dashmap.workspace = true
+
+# Metrics
+metrics.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[lints]
+workspace = true

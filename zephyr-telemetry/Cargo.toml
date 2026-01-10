@@ -1,0 +1,39 @@
+[package]
+name = "zephyr-telemetry"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Logging, tracing, and metrics for Zephyr trading system"
+
+[dependencies]
+# Core dependencies
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+
+# Logging and tracing
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["json", "env-filter", "fmt"] }
+tracing-appender = "0.2"
+
+# Metrics
+metrics.workspace = true
+metrics-exporter-prometheus.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["sync", "time"] }
+
+# Utilities
+parking_lot.workspace = true
+dashmap.workspace = true
+regex = "1.11"
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile = "3.14"
+
+[lints]
+workspace = true

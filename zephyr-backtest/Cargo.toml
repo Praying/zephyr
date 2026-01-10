@@ -1,0 +1,27 @@
+[package]
+name = "zephyr-backtest"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Backtesting engine for Zephyr trading system"
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+zephyr-data = { path = "../zephyr-data" }
+zephyr-engine = { path = "../zephyr-engine" }
+tokio.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+rust_decimal_macros.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,56 @@
+[package]
+name = "zephyr-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "REST and WebSocket API for Zephyr trading system"
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+zephyr-engine = { path = "../zephyr-engine" }
+zephyr-risk = { path = "../zephyr-risk" }
+zephyr-telemetry = { path = "../zephyr-telemetry" }
+zephyr-security = { path = "../zephyr-security" }
+
+# Async runtime
+tokio.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+
+# Web framework
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Authentication
+jsonwebtoken.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Utilities
+uuid.workspace = true
+chrono.workspace = true
+parking_lot.workspace = true
+dashmap.workspace = true
+rust_decimal.workspace = true
+
+# WebSocket
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+flate2 = "1.0"
+
+[dev-dependencies]
+proptest.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

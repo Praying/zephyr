@@ -1,0 +1,32 @@
+[package]
+name = "zephyr-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Command-line interface for Zephyr trading system"
+
+[[bin]]
+name = "zephyr"
+path = "src/main.rs"
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+zephyr-data = { path = "../zephyr-data" }
+zephyr-backtest = { path = "../zephyr-backtest" }
+tokio.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+
+[lints]
+workspace = true

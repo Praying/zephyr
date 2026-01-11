@@ -86,6 +86,8 @@ jobs:
           cache-on-failure: true
       - name: Run all tests
         run: cargo test --all-features --workspace --exclude zephyr-python
+        env:
+          RUSTFLAGS: ""
 
   fmt:
     name: Format check

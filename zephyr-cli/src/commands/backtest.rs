@@ -170,6 +170,7 @@ fn output_results(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn results_to_table(results: &BacktestResults) -> String {
     use std::fmt::Write;
     let mut output = String::new();

@@ -4,6 +4,8 @@
 //! task distribution, leader election, and state synchronization.
 
 #![allow(unused_imports)]
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::collapsible_if)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -494,7 +496,7 @@ impl DistributedExecutor for DistributedExecutorImpl {
     async fn sync_state(&self) -> Result<(), ExecutorError> {
         // Create snapshot and apply (in real implementation, this would
         // communicate with other nodes)
-        let snapshot = self.state_sync.create_snapshot();
+        let _snapshot = self.state_sync.create_snapshot();
 
         // For now, just log that sync was requested
         debug!(

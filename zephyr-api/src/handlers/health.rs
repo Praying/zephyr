@@ -73,8 +73,8 @@ pub async fn metrics(State(state): State<Arc<AppState>>) -> ApiResponse<MetricsR
     let response = MetricsResponse {
         total_requests: 0, // Would be tracked by metrics system
         active_connections: 0,
-        strategy_count: state.strategies.len() as u32,
-        order_count: state.orders.len() as u32,
+        strategy_count: u32::try_from(state.strategies.len()).unwrap_or(u32::MAX),
+        order_count: u32::try_from(state.orders.len()).unwrap_or(u32::MAX),
     };
 
     ApiResponse::success(response)

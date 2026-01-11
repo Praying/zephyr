@@ -221,6 +221,7 @@ impl OkxTrader {
     }
 
     /// Returns the current timestamp in milliseconds.
+    #[allow(dead_code)]
     fn timestamp_ms() -> u64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

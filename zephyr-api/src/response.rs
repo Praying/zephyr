@@ -7,7 +7,10 @@ use serde::Serialize;
 
 /// Standard API response wrapper.
 #[derive(Debug, Serialize)]
-pub struct ApiResponse<T: Serialize> {
+pub struct ApiResponse<T>
+where
+    T: Serialize,
+{
     /// Response status
     pub status: &'static str,
     /// Response data
@@ -96,7 +99,10 @@ impl IntoResponse for EmptyResponse {
 
 /// Paginated response wrapper.
 #[derive(Debug, Serialize)]
-pub struct PaginatedResponse<T: Serialize> {
+pub struct PaginatedResponse<T>
+where
+    T: Serialize,
+{
     /// Response status
     pub status: &'static str,
     /// Response data
@@ -126,7 +132,13 @@ impl PaginationInfo {
     /// Creates pagination info from parameters.
     #[must_use]
     pub fn new(page: u32, per_page: u32, total: u64) -> Self {
-        let total_pages = ((total as f64) / (per_page as f64)).ceil() as u32;
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let total_pages =
+            u32::try_from(((total as f64) / f64::from(per_page)).ceil() as u64).unwrap_or(u32::MAX);
         Self {
             page,
             per_page,
@@ -158,7 +170,10 @@ impl<T: Serialize> IntoResponse for PaginatedResponse<T> {
 
 /// Created response (HTTP 201).
 #[derive(Debug, Serialize)]
-pub struct CreatedResponse<T: Serialize> {
+pub struct CreatedResponse<T>
+where
+    T: Serialize,
+{
     /// Response status
     pub status: &'static str,
     /// Created resource

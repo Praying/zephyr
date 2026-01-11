@@ -4,6 +4,9 @@
 //! which manages position state, data access, and signal generation for
 //! CTA (Commodity Trading Advisor) strategies.
 
+#![allow(clippy::disallowed_types)]
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -99,6 +102,7 @@ impl CtaStrategyContextImpl {
     }
 
     /// Adds K-line data to the cache.
+    #[allow(clippy::significant_drop_tightening)]
     pub fn add_kline(&self, kline: KlineData) {
         let key = (kline.symbol.clone(), kline.period);
         let mut cache = self.kline_cache.write();
@@ -112,6 +116,7 @@ impl CtaStrategyContextImpl {
     }
 
     /// Adds tick data to the cache.
+    #[allow(clippy::significant_drop_tightening)]
     pub fn add_tick(&self, tick: TickData) {
         // Update price from tick
         self.update_price(&tick.symbol, tick.price);
@@ -134,6 +139,7 @@ impl CtaStrategyContextImpl {
 
     /// Returns the theoretical position for a symbol.
     #[must_use]
+    #[allow(clippy::map_unwrap_or)]
     pub fn get_theoretical_position(&self, symbol: &Symbol) -> Quantity {
         self.positions
             .get(symbol)
@@ -149,6 +155,7 @@ impl CtaStrategyContextImpl {
 
 #[async_trait]
 impl CtaStrategyContext for CtaStrategyContextImpl {
+    #[allow(clippy::map_unwrap_or)]
     fn get_position(&self, symbol: &Symbol) -> Quantity {
         self.positions
             .get(symbol)
@@ -530,7 +537,7 @@ mod tests {
         let aggregator = create_test_aggregator();
         let ctx = CtaStrategyContextImpl::new("test", vec![], aggregator);
 
-        let ts = Timestamp::new(1704067200000).unwrap();
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
         ctx.set_current_time(ts);
         assert_eq!(ctx.current_time(), ts);
     }

@@ -1,22 +1,22 @@
 //! Error types and handling framework.
 //!
 //! This module provides a hierarchical error type system with
-//! domain-specific error categories for the Zephyr trading system.
+//! domain-specific error categories for Zephyr trading system.
 //!
 //! # Error Hierarchy
 //!
 //! The error system is organized hierarchically:
-//! - [`ZephyrError`] - Top-level error type
-//!   - [`NetworkError`] - Network and connection errors
-//!   - [`ExchangeError`] - Exchange API errors
-//!   - [`DataError`] - Data parsing and validation errors
-//!   - [`StrategyError`] - Strategy execution errors
-//!   - [`ConfigError`] - Configuration errors
-//!   - [`StorageError`] - Storage and I/O errors
+//! - ZephyrError - Top-level error type
+//!   - NetworkError - Network and connection errors
+//!   - ExchangeError - Exchange API errors
+//!   - DataError - Data parsing and validation errors
+//!   - StrategyError - Strategy execution errors
+//!   - ConfigError - Configuration errors
+//!   - StorageError - Storage and I/O errors
 //!
 //! # Error Context
 //!
-//! Use [`ErrorContext`] and [`ContextualError`] to attach metadata to errors:
+//! Use ErrorContext and ContextualError to attach metadata to errors:
 //!
 //! ```
 //! use zephyr_core::error::{ErrorContext, NetworkError, ZephyrError, WithContext};

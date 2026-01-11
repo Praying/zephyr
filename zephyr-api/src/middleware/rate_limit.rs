@@ -104,7 +104,7 @@ struct TokenBucket {
 impl TokenBucket {
     fn new(capacity: u32, refill_rate: u32, window: Duration) -> Self {
         Self {
-            tokens: Mutex::new(capacity as f64),
+            tokens: Mutex::new(f64::from(capacity)),
             capacity,
             refill_rate,
             window,
@@ -120,21 +120,27 @@ impl TokenBucket {
         // Refill tokens based on elapsed time
         let elapsed = now.duration_since(*last_update);
         let refill =
-            (elapsed.as_secs_f64() / self.window.as_secs_f64()) * (self.refill_rate as f64);
-        *tokens = (*tokens + refill).min(self.capacity as f64);
+            (elapsed.as_secs_f64() / self.window.as_secs_f64()) * f64::from(self.refill_rate);
+        *tokens = (*tokens + refill).min(f64::from(self.capacity));
         *last_update = now;
+        drop(last_update);
 
         if *tokens >= 1.0 {
             *tokens -= 1.0;
             let reset_at = now + self.window;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let remaining = (tokens.max(0.0) as u32).min(self.capacity);
+            drop(tokens);
             RateLimitResult::Allowed {
-                remaining: *tokens as u32,
+                remaining,
                 reset_at,
             }
         } else {
             // Calculate retry after
             let tokens_needed = 1.0 - *tokens;
-            let time_needed = (tokens_needed / self.refill_rate as f64) * self.window.as_secs_f64();
+            let time_needed =
+                (tokens_needed / f64::from(self.refill_rate)) * self.window.as_secs_f64();
+            drop(tokens);
             RateLimitResult::Denied {
                 retry_after: Duration::from_secs_f64(time_needed),
             }
@@ -148,10 +154,12 @@ impl TokenBucket {
 
 /// Rate limit layer for Axum.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct RateLimitLayer {
     limiter: Arc<RateLimiter>,
 }
 
+#[allow(dead_code)]
 impl RateLimitLayer {
     /// Creates a new rate limit layer.
     #[must_use]
@@ -161,6 +169,7 @@ impl RateLimitLayer {
 }
 
 /// Rate limit middleware function.
+#[allow(dead_code)]
 pub async fn rate_limit_middleware(
     limiter: Arc<RateLimiter>,
     request: Request<Body>,
@@ -199,6 +208,7 @@ pub async fn rate_limit_middleware(
 }
 
 /// Extracts the client key from the request.
+#[allow(dead_code)]
 fn extract_client_key(request: &Request<Body>) -> String {
     // Try to get API key from header
     if let Some(api_key) = request
@@ -226,6 +236,7 @@ fn extract_client_key(request: &Request<Body>) -> String {
 }
 
 /// Creates a rate limit exceeded response.
+#[allow(dead_code)]
 fn rate_limit_exceeded_response(retry_after: Duration) -> Response {
     let body = ErrorResponse {
         status: "error",

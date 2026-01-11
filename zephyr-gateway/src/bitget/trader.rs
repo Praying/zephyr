@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 //! Bitget trading gateway implementation.
 //!
 //! Implements the [`TraderGateway`] trait for Bitget REST/WebSocket API.
@@ -8,7 +10,6 @@ use hmac::{Hmac, Mac};
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
 use sha2::Sha256;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{debug, info};
@@ -65,7 +66,7 @@ pub struct BitgetTrader {
     /// Login state
     logged_in: Arc<AtomicBool>,
     /// Local order cache
-    orders: Arc<RwLock<HashMap<OrderId, Order>>>,
+    orders: Arc<RwLock<std::collections::HashMap<OrderId, Order>>>,
     /// Use testnet (demo trading)
     testnet: bool,
 }
@@ -92,7 +93,7 @@ impl BitgetTrader {
             credentials: None,
             callback: None,
             logged_in: Arc::new(AtomicBool::new(false)),
-            orders: Arc::new(RwLock::new(HashMap::new())),
+            orders: Arc::new(RwLock::new(std::collections::HashMap::new())),
             testnet: false,
         }
     }
@@ -159,9 +160,8 @@ impl BitgetTrader {
     /// Converts order type to Bitget format.
     fn to_bitget_order_type(order_type: OrderType) -> BitgetOrderType {
         match order_type {
-            OrderType::Limit => BitgetOrderType::Limit,
             OrderType::Market => BitgetOrderType::Market,
-            _ => BitgetOrderType::Limit,
+            OrderType::Limit | _ => BitgetOrderType::Limit,
         }
     }
 
@@ -188,15 +188,15 @@ impl BitgetTrader {
     /// Converts time in force to Bitget format.
     fn to_bitget_tif(tif: TimeInForce) -> BitgetTimeInForce {
         match tif {
-            TimeInForce::Gtc => BitgetTimeInForce::Gtc,
+            TimeInForce::Gtc | TimeInForce::Gtd => BitgetTimeInForce::Gtc,
             TimeInForce::Ioc => BitgetTimeInForce::Ioc,
             TimeInForce::Fok => BitgetTimeInForce::Fok,
             TimeInForce::PostOnly => BitgetTimeInForce::PostOnly,
-            TimeInForce::Gtd => BitgetTimeInForce::Gtc,
         }
     }
 
     /// Returns the current timestamp in milliseconds.
+    #[allow(clippy::cast_possible_truncation)]
     fn timestamp_ms() -> u64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -219,7 +219,7 @@ impl BitgetTrader {
     fn client(&self) -> Result<&RestClient, ExchangeError> {
         self.rest_client
             .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
+            .ok_or_else(|| ExchangeError::AuthenticationFailed {
                 reason: "Not logged in".to_string(),
             })
     }
@@ -266,7 +266,8 @@ impl BitgetTrader {
     }
 
     /// Converts Bitget order details to standard Order.
-    fn convert_order_details(&self, details: &BitgetOrderDetails) -> Option<Order> {
+    #[allow(clippy::too_many_lines)]
+    fn convert_order_details(details: &BitgetOrderDetails) -> Option<Order> {
         let symbol = Self::from_bitget_symbol(&details.inst_id)?;
         let order_id = OrderId::new(&details.order_id).ok()?;
         let status = Self::from_bitget_status(details.status);
@@ -339,7 +340,8 @@ impl BitgetTrader {
     }
 
     /// Converts Bitget position to standard Position.
-    fn convert_position(&self, pos: &BitgetPosition) -> Option<Position> {
+    #[allow(clippy::too_many_lines)]
+    fn convert_position(pos: &BitgetPosition) -> Option<Position> {
         let symbol = Self::from_bitget_symbol(&pos.inst_id)?;
         let quantity_val: Decimal = pos.total.parse().ok()?;
 
@@ -427,13 +429,14 @@ impl Default for BitgetTrader {
 
 #[async_trait]
 impl TraderGateway for BitgetTrader {
+    #[allow(clippy::too_many_lines)]
     async fn login(&mut self, credentials: &Credentials) -> Result<(), ExchangeError> {
         // Bitget requires passphrase
         let passphrase =
             credentials
                 .passphrase
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Bitget requires passphrase".to_string(),
                 })?;
 
@@ -485,15 +488,15 @@ impl TraderGateway for BitgetTrader {
 
         if !status.is_success() {
             return Err(ExchangeError::AuthenticationFailed {
-                reason: format!("HTTP {}: {}", status, body),
+                reason: format!("HTTP {status}: {body}"),
             });
         }
 
         // Parse response to check for API errors
-        if let Ok(resp) = serde_json::from_str::<BitgetApiResponse<serde_json::Value>>(&body) {
-            if !resp.is_success() {
-                return Err(Self::parse_error(&resp.code, &resp.msg));
-            }
+        if let Ok(resp) = serde_json::from_str::<BitgetApiResponse<serde_json::Value>>(&body)
+            && !resp.is_success()
+        {
+            return Err(Self::parse_error(&resp.code, &resp.msg));
         }
 
         self.rest_client = Some(rest_client);
@@ -535,17 +538,17 @@ impl TraderGateway for BitgetTrader {
 
     async fn order_insert(&self, order: &OrderRequest) -> Result<OrderId, ExchangeError> {
         let client = self.client()?;
-        let credentials = self
-            .credentials
-            .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
-                reason: "Not logged in".to_string(),
-            })?;
+        let credentials =
+            self.credentials
+                .as_ref()
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
+                    reason: "Not logged in".to_string(),
+                })?;
         let passphrase =
             credentials
                 .passphrase
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Missing passphrase".to_string(),
                 })?;
 
@@ -559,16 +562,14 @@ impl TraderGateway for BitgetTrader {
             BitgetMarket::Spot => {
                 let mut body = serde_json::json!({
                     "symbol": bitget_symbol,
-                    "side": format!("{:?}", side).to_lowercase(),
-                    "orderType": format!("{:?}", ord_type).to_lowercase(),
+                    "side": format!("{side:?}").to_lowercase(),
+                    "orderType": format!("{ord_type:?}").to_lowercase(),
                     "size": order.quantity.to_string(),
-                    "force": format!("{:?}", tif).to_lowercase(),
+                    "force": format!("{tif:?}").to_lowercase(),
                 });
 
-                if order.order_type.requires_price() {
-                    if let Some(price) = &order.price {
-                        body["price"] = serde_json::json!(price.to_string());
-                    }
+                if order.order_type.requires_price() && order.price.is_some() {
+                    body["price"] = serde_json::json!(order.price.as_ref().unwrap().to_string());
                 }
 
                 if let Some(client_order_id) = &order.client_order_id {
@@ -591,16 +592,14 @@ impl TraderGateway for BitgetTrader {
                     "productType": product_type,
                     "marginMode": "crossed",
                     "marginCoin": margin_coin,
-                    "side": format!("{:?}", side).to_lowercase(),
-                    "orderType": format!("{:?}", ord_type).to_lowercase(),
+                    "side": format!("{side:?}").to_lowercase(),
+                    "orderType": format!("{ord_type:?}").to_lowercase(),
                     "size": order.quantity.to_string(),
-                    "force": format!("{:?}", tif).to_lowercase(),
+                    "force": format!("{tif:?}").to_lowercase(),
                 });
 
-                if order.order_type.requires_price() {
-                    if let Some(price) = &order.price {
-                        body["price"] = serde_json::json!(price.to_string());
-                    }
+                if order.order_type.requires_price() && order.price.is_some() {
+                    body["price"] = serde_json::json!(order.price.as_ref().unwrap().to_string());
                 }
 
                 if let Some(client_order_id) = &order.client_order_id {
@@ -651,7 +650,7 @@ impl TraderGateway for BitgetTrader {
 
         if !status.is_success() {
             return Err(ExchangeError::OrderRejected {
-                reason: format!("HTTP {}: {}", status, body),
+                reason: format!("HTTP {status}: {body}"),
                 code: None,
             });
         }
@@ -666,7 +665,7 @@ impl TraderGateway for BitgetTrader {
             return Err(Self::parse_error(&api_response.code, &api_response.msg));
         }
 
-        let order_response = api_response.data.ok_or(ExchangeError::Unknown {
+        let order_response = api_response.data.ok_or_else(|| ExchangeError::Unknown {
             code: 0,
             message: "Empty response data".to_string(),
         })?;
@@ -690,17 +689,17 @@ impl TraderGateway for BitgetTrader {
 
     async fn order_cancel(&self, order_id: &OrderId) -> Result<bool, ExchangeError> {
         let client = self.client()?;
-        let credentials = self
-            .credentials
-            .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
-                reason: "Not logged in".to_string(),
-            })?;
+        let credentials =
+            self.credentials
+                .as_ref()
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
+                    reason: "Not logged in".to_string(),
+                })?;
         let passphrase =
             credentials
                 .passphrase
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Missing passphrase".to_string(),
                 })?;
 
@@ -710,7 +709,7 @@ impl TraderGateway for BitgetTrader {
             orders.get(order_id).map(|o| o.symbol.clone())
         };
 
-        let symbol = symbol.ok_or(ExchangeError::OrderNotFound {
+        let symbol = symbol.ok_or_else(|| ExchangeError::OrderNotFound {
             order_id: order_id.to_string(),
         })?;
 
@@ -768,7 +767,7 @@ impl TraderGateway for BitgetTrader {
 
         if !status.is_success() {
             return Err(ExchangeError::Unknown {
-                code: status.as_u16() as i32,
+                code: i32::from(status.as_u16()),
                 message: body,
             });
         }
@@ -829,17 +828,17 @@ impl TraderGateway for BitgetTrader {
 
     async fn query_positions(&self) -> Result<Vec<Position>, ExchangeError> {
         let client = self.client()?;
-        let credentials = self
-            .credentials
-            .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
-                reason: "Not logged in".to_string(),
-            })?;
+        let credentials =
+            self.credentials
+                .as_ref()
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
+                    reason: "Not logged in".to_string(),
+                })?;
         let passphrase =
             credentials
                 .passphrase
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Missing passphrase".to_string(),
                 })?;
 
@@ -849,10 +848,7 @@ impl TraderGateway for BitgetTrader {
         }
 
         let product_type = self.market.product_type();
-        let path = format!(
-            "/api/v2/mix/position/all-position?productType={}",
-            product_type
-        );
+        let path = format!("/api/v2/mix/position/all-position?productType={product_type}");
 
         let timestamp = Self::timestamp_ms().to_string();
         let method = "GET";
@@ -879,7 +875,7 @@ impl TraderGateway for BitgetTrader {
 
         if !status.is_success() {
             return Err(ExchangeError::Unknown {
-                code: status.as_u16() as i32,
+                code: i32::from(status.as_u16()),
                 message: body,
             });
         }
@@ -898,7 +894,7 @@ impl TraderGateway for BitgetTrader {
             .data
             .unwrap_or_default()
             .iter()
-            .filter_map(|p| self.convert_position(p))
+            .filter_map(Self::convert_position)
             .collect();
 
         debug!(
@@ -912,45 +908,41 @@ impl TraderGateway for BitgetTrader {
 
     async fn query_orders(&self, symbol: Option<&Symbol>) -> Result<Vec<Order>, ExchangeError> {
         let client = self.client()?;
-        let credentials = self
-            .credentials
-            .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
-                reason: "Not logged in".to_string(),
-            })?;
+        let credentials =
+            self.credentials
+                .as_ref()
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
+                    reason: "Not logged in".to_string(),
+                })?;
         let passphrase =
             credentials
                 .passphrase
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Missing passphrase".to_string(),
                 })?;
 
         let path = match self.market {
-            BitgetMarket::Spot => {
-                if let Some(sym) = symbol {
+            BitgetMarket::Spot => symbol.map_or_else(
+                || "/api/v2/spot/trade/unfilled-orders".to_string(),
+                |sym| {
                     format!(
                         "/api/v2/spot/trade/unfilled-orders?symbol={}",
                         Self::to_bitget_symbol(sym)
                     )
-                } else {
-                    "/api/v2/spot/trade/unfilled-orders".to_string()
-                }
-            }
+                },
+            ),
             BitgetMarket::UsdtFutures | BitgetMarket::CoinFutures => {
                 let product_type = self.market.product_type();
-                if let Some(sym) = symbol {
-                    format!(
-                        "/api/v2/mix/order/orders-pending?productType={}&symbol={}",
-                        product_type,
-                        Self::to_bitget_symbol(sym)
-                    )
-                } else {
-                    format!(
-                        "/api/v2/mix/order/orders-pending?productType={}",
-                        product_type
-                    )
-                }
+                symbol.map_or_else(
+                    || format!("/api/v2/mix/order/orders-pending?productType={product_type}"),
+                    |sym| {
+                        format!(
+                            "/api/v2/mix/order/orders-pending?productType={product_type}&symbol={}",
+                            Self::to_bitget_symbol(sym)
+                        )
+                    },
+                )
             }
         };
 
@@ -979,7 +971,7 @@ impl TraderGateway for BitgetTrader {
 
         if !status.is_success() {
             return Err(ExchangeError::Unknown {
-                code: status.as_u16() as i32,
+                code: i32::from(status.as_u16()),
                 message: body,
             });
         }
@@ -998,7 +990,7 @@ impl TraderGateway for BitgetTrader {
             .data
             .unwrap_or_default()
             .iter()
-            .filter_map(|o| self.convert_order_details(o))
+            .filter_map(Self::convert_order_details)
             .collect();
 
         // Update local cache
@@ -1031,17 +1023,17 @@ impl TraderGateway for BitgetTrader {
 
     async fn query_account(&self) -> Result<Account, ExchangeError> {
         let client = self.client()?;
-        let credentials = self
-            .credentials
-            .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
-                reason: "Not logged in".to_string(),
-            })?;
+        let credentials =
+            self.credentials
+                .as_ref()
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
+                    reason: "Not logged in".to_string(),
+                })?;
         let passphrase =
             credentials
                 .passphrase
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Missing passphrase".to_string(),
                 })?;
 
@@ -1080,7 +1072,7 @@ impl TraderGateway for BitgetTrader {
 
         if !status.is_success() {
             return Err(ExchangeError::Unknown {
-                code: status.as_u16() as i32,
+                code: i32::from(status.as_u16()),
                 message: body,
             });
         }
@@ -1206,7 +1198,7 @@ impl TraderGateway for BitgetTrader {
         self.callback = Some(Arc::from(callback));
     }
 
-    fn exchange(&self) -> &str {
+    fn exchange(&self) -> &'static str {
         "bitget"
     }
 }

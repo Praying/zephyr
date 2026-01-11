@@ -11,6 +11,8 @@
 #![allow(clippy::uninlined_format_args)]
 #![allow(clippy::implicit_hasher)]
 #![allow(clippy::option_if_let_else)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::map_unwrap_or)]
 
 use std::collections::HashMap;
 

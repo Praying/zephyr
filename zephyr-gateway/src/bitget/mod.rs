@@ -1,8 +1,8 @@
 //! Bitget exchange adapter.
 //!
 //! This module provides adapters for Bitget exchange:
-//! - [`BitgetParser`] - Market data parser for WebSocket streams
-//! - [`BitgetTrader`] - Trading gateway for REST/WebSocket API
+//! - BitgetParser - Market data parser for WebSocket streams
+//! - BitgetTrader - Trading gateway for REST/WebSocket API
 //!
 //! # Supported Markets
 //!

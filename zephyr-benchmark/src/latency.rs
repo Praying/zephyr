@@ -87,8 +87,9 @@ pub struct LatencyMeasurement<'a> {
     start: Instant,
 }
 
-impl<'a> LatencyMeasurement<'a> {
+impl LatencyMeasurement<'_> {
     /// Stop the measurement and record the latency.
+    #[must_use]
     pub fn stop(self) -> Duration {
         let elapsed = self.start.elapsed();
         self.tracker.record(elapsed);
@@ -96,6 +97,7 @@ impl<'a> LatencyMeasurement<'a> {
     }
 
     /// Stop the measurement with a custom end time.
+    #[must_use]
     pub fn stop_at(self, end: Instant) -> Duration {
         let elapsed = end.duration_since(self.start);
         self.tracker.record(elapsed);
@@ -159,6 +161,7 @@ impl LatencyTracker {
     }
 
     /// Record a latency duration directly.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn record(&self, duration: Duration) {
         let nanos = duration.as_nanos() as u64;
 
@@ -235,12 +238,14 @@ impl LatencyTracker {
         // Get sorted samples for percentile calculation
         let samples = self.samples.read();
         let mut sorted: Vec<Duration> = samples.iter().copied().collect();
+        drop(samples); // Drop the lock before sorting
         sorted.sort();
 
         let percentile = |p: f64| -> Duration {
             if sorted.is_empty() {
                 return Duration::ZERO;
             }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let idx = ((sorted.len() as f64 * p) as usize).min(sorted.len() - 1);
             sorted[idx]
         };
@@ -255,6 +260,7 @@ impl LatencyTracker {
             })
             .sum::<f64>()
             / sorted.len().max(1) as f64;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let std_dev = Duration::from_nanos(variance.sqrt() as u64);
 
         LatencyStats {

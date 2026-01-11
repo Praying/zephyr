@@ -4,9 +4,9 @@ Core types, traits, and interfaces for the Zephyr cryptocurrency trading system.
 
 ## Overview
 
-This crate provides the foundational building blocks for the Zephyr trading platform:
+This crate provides foundational building blocks for Zephyr trading platform:
 
-- **`NewType` Wrappers**: Type-safe wrappers for financial primitives (`Price`, `Quantity`, `Amount`, `Symbol`, etc.)
+- **`NewType` Wrappers**: Type-safe wrappers for financial primitives (Price, Quantity, Amount, Symbol, etc.)
 - **Data Structures**: Market data structures (`TickData`, `KlineData`, `OrderBook`)
 - **Error Framework**: Hierarchical error types with context preservation
 - **Trait Definitions**: Core interfaces for parsers, traders, and strategies

@@ -3,6 +3,10 @@
 //! This module provides task management for distributed execution including
 //! task IDs, priorities, and load balancing across nodes.
 
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::too_many_lines)]
+
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};

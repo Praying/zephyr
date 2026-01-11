@@ -6,9 +6,11 @@
 //! - Anomaly detection (price spikes, volume anomalies)
 //! - Quality reports
 
+#![allow(clippy::disallowed_types)]
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use zephyr_core::data::{KlineData, TickData};
 use zephyr_core::types::{Symbol, Timestamp};
@@ -87,7 +89,7 @@ pub struct DataQualityReport {
 
 /// Data quality checker.
 pub struct DataQualityChecker {
-    metrics: Arc<RwLock<HashMap<Symbol, QualityMetrics>>>,
+    metrics: Arc<parking_lot::RwLock<HashMap<Symbol, QualityMetrics>>>,
 }
 
 impl DataQualityChecker {
@@ -95,7 +97,7 @@ impl DataQualityChecker {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            metrics: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(parking_lot::RwLock::new(HashMap::new())),
         }
     }
 
@@ -108,25 +110,26 @@ impl DataQualityChecker {
         let rt = tokio::runtime::Handle::try_current();
         if let Ok(handle) = rt {
             handle.spawn(async move {
-                let mut m = metrics.write().await;
-                let entry = m
-                    .entry(tick.symbol.clone())
-                    .or_insert_with(|| QualityMetrics::new(tick.symbol.clone()));
+                {
+                    let mut metrics_guard = metrics.write();
+                    let entry = metrics_guard
+                        .entry(tick.symbol.clone())
+                        .or_insert_with(|| QualityMetrics::new(tick.symbol.clone()));
 
-                entry.tick_count += 1;
-                entry.last_update = tick.timestamp;
+                    entry.tick_count += 1;
+                    entry.last_update = tick.timestamp;
 
-                // Check for price anomalies
-                let time_diff = tick.timestamp.as_millis() - entry.last_update.as_millis();
-                if time_diff > 0 {
-                    let latency = time_diff as f64;
-                    entry.avg_latency_ms = (entry.avg_latency_ms * 0.9) + (latency * 0.1);
-                    if latency > entry.max_latency_ms {
-                        entry.max_latency_ms = latency;
-                    }
+                    // Check for price anomalies
+                    let time_diff = tick.timestamp.as_millis() - entry.last_update.as_millis();
+                    if time_diff > 0 {
+                        let latency = f64::from(i32::try_from(time_diff).unwrap_or(i32::MAX));
+                        entry.avg_latency_ms = entry.avg_latency_ms.mul_add(0.9, latency * 0.1);
+                        if latency > entry.max_latency_ms {
+                            entry.max_latency_ms = latency;
+                        }
 
-                    if latency > 1000.0 {
-                        if !entry.anomalies.contains(&AnomalyType::LatencySpike) {
+                        if latency > 1000.0 && !entry.anomalies.contains(&AnomalyType::LatencySpike)
+                        {
                             entry.anomalies.push(AnomalyType::LatencySpike);
                         }
                     }
@@ -144,17 +147,18 @@ impl DataQualityChecker {
         let rt = tokio::runtime::Handle::try_current();
         if let Ok(handle) = rt {
             handle.spawn(async move {
-                let mut m = metrics.write().await;
-                let entry = m
-                    .entry(kline.symbol.clone())
-                    .or_insert_with(|| QualityMetrics::new(kline.symbol.clone()));
+                {
+                    let mut metrics_guard = metrics.write();
+                    let entry = metrics_guard
+                        .entry(kline.symbol.clone())
+                        .or_insert_with(|| QualityMetrics::new(kline.symbol.clone()));
 
-                entry.kline_count += 1;
-                entry.last_update = kline.timestamp;
+                    entry.kline_count += 1;
+                    entry.last_update = kline.timestamp;
 
-                // Check for price anomalies (high > low)
-                if kline.high < kline.low {
-                    if !entry.anomalies.contains(&AnomalyType::PriceSpike) {
+                    // Check for price anomalies (high > low)
+                    if kline.high < kline.low && !entry.anomalies.contains(&AnomalyType::PriceSpike)
+                    {
                         entry.anomalies.push(AnomalyType::PriceSpike);
                     }
                 }
@@ -163,27 +167,19 @@ impl DataQualityChecker {
     }
 
     /// Checks data quality for a symbol.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn check_quality(&self, symbol: &Symbol) -> DataQualityReport {
-        let metrics = self.metrics.clone();
-        let symbol = symbol.clone();
-
-        // This is a synchronous method, so we need to use blocking
-        let rt = tokio::runtime::Handle::try_current();
-
-        let metrics_map = if let Ok(handle) = rt {
-            handle.block_on(async { metrics.read().await.clone() })
-        } else {
-            // Fallback if no runtime
-            HashMap::new()
-        };
+        // Direct read from parking_lot RwLock which is sync
+        let metrics_map = self.metrics.read().clone();
 
         let metrics = metrics_map
-            .get(&symbol)
+            .get(symbol)
             .cloned()
             .unwrap_or_else(|| QualityMetrics::new(symbol.clone()));
 
         // Calculate quality score
-        let mut quality_score = 100.0;
+        let mut quality_score: f64 = 100.0;
 
         // Deduct for latency
         if metrics.avg_latency_ms > 100.0 {
@@ -191,15 +187,15 @@ impl DataQualityChecker {
         }
 
         // Deduct for anomalies
-        quality_score -= (metrics.anomalies.len() as f64) * 5.0;
+        quality_score -= metrics.anomalies.len() as f64 * 5.0;
 
         // Deduct for low completeness
-        quality_score -= (100.0 - metrics.completeness).min(20.0);
+        quality_score -= (100.0_f64 - metrics.completeness).min(20.0);
 
-        quality_score = quality_score.max(0.0).min(100.0);
+        quality_score = quality_score.clamp(0.0, 100.0);
 
         DataQualityReport {
-            symbol,
+            symbol: symbol.clone(),
             quality_score,
             completeness: metrics.completeness,
             avg_latency_ms: metrics.avg_latency_ms,
@@ -210,15 +206,15 @@ impl DataQualityChecker {
     }
 
     /// Gets all quality metrics.
+    #[allow(clippy::unused_async)]
     pub async fn get_all_metrics(&self) -> Vec<QualityMetrics> {
-        let metrics = self.metrics.read().await;
-        metrics.values().cloned().collect()
+        self.metrics.read().values().cloned().collect()
     }
 
     /// Clears metrics for a symbol.
+    #[allow(clippy::unused_async)]
     pub async fn clear_metrics(&self, symbol: &Symbol) {
-        let mut metrics = self.metrics.write().await;
-        metrics.remove(symbol);
+        self.metrics.write().remove(symbol);
     }
 }
 
@@ -237,7 +233,7 @@ mod tests {
     fn create_test_tick() -> TickData {
         TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new(dec!(42000)).unwrap())
             .volume(Quantity::new(dec!(0.5)).unwrap())
             .bid_price(Price::new(dec!(41999)).unwrap())
@@ -251,7 +247,7 @@ mod tests {
     fn create_test_kline() -> KlineData {
         KlineData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .period(zephyr_core::data::KlinePeriod::Hour1)
             .open(Price::new(dec!(42000)).unwrap())
             .high(Price::new(dec!(42500)).unwrap())
@@ -270,7 +266,7 @@ mod tests {
 
         assert_eq!(metrics.symbol, symbol);
         assert_eq!(metrics.tick_count, 0);
-        assert_eq!(metrics.completeness, 100.0);
+        assert!((metrics.completeness - 100.0).abs() < f64::EPSILON);
     }
 
     #[test]

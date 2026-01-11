@@ -415,6 +415,7 @@ impl Default for PriceDeviationConfig {
 /// Compares the implied order price against current market price.
 pub struct PriceDeviationFilter {
     id: FilterId,
+    #[allow(dead_code)]
     config: PriceDeviationConfig,
     enabled: bool,
 }

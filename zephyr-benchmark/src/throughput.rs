@@ -147,9 +147,12 @@ impl ThroughputTester {
 
     /// Check if warmup period has ended and take samples if needed.
     fn maybe_sample(&self) {
-        let start = match *self.start_time.read() {
-            Some(t) => t,
-            None => return,
+        let start = {
+            let guard = self.start_time.read();
+            match *guard {
+                Some(t) => t,
+                None => return,
+            }
         };
 
         let now = Instant::now();
@@ -169,9 +172,12 @@ impl ThroughputTester {
         }
 
         // Take sample if interval has passed
-        let last_sample = match *self.last_sample_time.read() {
-            Some(t) => t,
-            None => return,
+        let last_sample = {
+            let guard = self.last_sample_time.read();
+            match *guard {
+                Some(t) => t,
+                None => return,
+            }
         };
 
         if now.duration_since(last_sample) >= self.config.sample_interval && !*self.is_warmup.read()
@@ -237,9 +243,12 @@ impl ThroughputTester {
     /// Check if the test duration has elapsed.
     #[must_use]
     pub fn is_complete(&self) -> bool {
-        let start = match *self.start_time.read() {
-            Some(t) => t,
-            None => return false,
+        let start = {
+            let guard = self.start_time.read();
+            match *guard {
+                Some(t) => t,
+                None => return false,
+            }
         };
 
         let elapsed = Instant::now().duration_since(start);
@@ -250,9 +259,12 @@ impl ThroughputTester {
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn current_ops_per_second(&self) -> f64 {
-        let start = match *self.start_time.read() {
-            Some(t) => t,
-            None => return 0.0,
+        let start = {
+            let guard = self.start_time.read();
+            match *guard {
+                Some(t) => t,
+                None => return 0.0,
+            }
         };
 
         let elapsed = Instant::now().duration_since(start);

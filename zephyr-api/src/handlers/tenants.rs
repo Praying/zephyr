@@ -18,7 +18,7 @@ use crate::middleware::Auth;
 use crate::response::{ApiResponse, CreatedResponse, EmptyResponse, PaginatedResponse};
 use crate::state::AppState;
 
-use zephyr_security::tenant::{ResourceQuota, Tenant, TenantConfig, TenantManager, TenantStatus};
+use zephyr_security::tenant::{ResourceQuota, Tenant, TenantConfig, TenantStatus};
 
 /// Tenant list item.
 #[derive(Debug, Serialize)]
@@ -603,7 +603,7 @@ pub async fn tenant_stats(
 
     let tenant_manager = state.tenant_manager();
 
-    let stats = TenantStatsResponse {
+    let tenant_stats = TenantStatsResponse {
         total_tenants: tenant_manager.tenant_count() as u64,
         active_tenants: tenant_manager.active_tenant_count() as u64,
         pending_tenants: tenant_manager
@@ -614,7 +614,7 @@ pub async fn tenant_stats(
             .len() as u64,
     };
 
-    Ok(ApiResponse::success(stats))
+    Ok(ApiResponse::success(tenant_stats))
 }
 
 /// Tenant statistics response.

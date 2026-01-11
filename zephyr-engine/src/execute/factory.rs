@@ -178,10 +178,12 @@ impl ExecuteUnitFactory for DefaultExecuteUnitFactory {
 ///
 /// Allows registering multiple factories and creating units from any of them.
 #[derive(Default)]
+#[allow(dead_code)]
 pub struct ExecuteUnitRegistry {
     factories: HashMap<String, Arc<dyn ExecuteUnitFactory>>,
 }
 
+#[allow(dead_code)]
 impl ExecuteUnitRegistry {
     /// Creates a new empty registry.
     #[must_use]

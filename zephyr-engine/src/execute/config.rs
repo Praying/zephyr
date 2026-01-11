@@ -1,5 +1,7 @@
 //! Configuration types for execution units.
 
+#![allow(clippy::struct_field_names)]
+
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

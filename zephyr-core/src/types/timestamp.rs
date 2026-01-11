@@ -40,7 +40,7 @@ impl Timestamp {
     /// ```
     /// use zephyr_core::types::Timestamp;
     ///
-    /// let ts = Timestamp::new(1704067200000).unwrap();
+    /// let ts = Timestamp::new(1_704_067_200_000).unwrap();
     /// assert!(Timestamp::new(-1).is_err());
     /// ```
     pub fn new(millis: i64) -> Result<Self, ValidationError> {
@@ -155,8 +155,8 @@ mod tests {
 
     #[test]
     fn test_timestamp_new_valid() {
-        let ts = Timestamp::new(1704067200000).unwrap();
-        assert_eq!(ts.as_millis(), 1704067200000);
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
+        assert_eq!(ts.as_millis(), 1_704_067_200_000);
     }
 
     #[test]
@@ -179,27 +179,27 @@ mod tests {
 
     #[test]
     fn test_timestamp_from_secs() {
-        let ts = Timestamp::from_secs(1704067200).unwrap();
-        assert_eq!(ts.as_millis(), 1704067200000);
-        assert_eq!(ts.as_secs(), 1704067200);
+        let ts = Timestamp::from_secs(1_704_067_200).unwrap();
+        assert_eq!(ts.as_millis(), 1_704_067_200_000);
+        assert_eq!(ts.as_secs(), 1_704_067_200);
     }
 
     #[test]
     fn test_timestamp_to_datetime() {
-        let ts = Timestamp::new(1704067200000).unwrap();
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
         let dt = ts.to_datetime();
-        assert_eq!(dt.timestamp_millis(), 1704067200000);
+        assert_eq!(dt.timestamp_millis(), 1_704_067_200_000);
     }
 
     #[test]
     fn test_timestamp_display() {
-        let ts = Timestamp::new(1704067200000).unwrap();
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
         assert_eq!(format!("{ts}"), "1704067200000");
     }
 
     #[test]
     fn test_timestamp_serde_roundtrip() {
-        let ts = Timestamp::new(1704067200000).unwrap();
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
         let json = serde_json::to_string(&ts).unwrap();
         let parsed: Timestamp = serde_json::from_str(&json).unwrap();
         assert_eq!(ts, parsed);

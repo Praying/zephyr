@@ -308,7 +308,7 @@ mod tests {
         isolation.register_tenant(tenant_id.clone());
         isolation.set_current_tenant(tenant_id.clone()).unwrap();
 
-        assert_eq!(isolation.current_tenant(), Some(tenant_id.clone()));
+        assert_eq!(isolation.current_tenant(), Some(tenant_id));
 
         isolation.clear_current_tenant();
         assert_eq!(isolation.current_tenant(), None);
@@ -375,7 +375,7 @@ mod tests {
 
         {
             let _scope = isolation.scoped_context(tenant_id.clone()).unwrap();
-            assert_eq!(isolation.current_tenant(), Some(tenant_id.clone()));
+            assert_eq!(isolation.current_tenant(), Some(tenant_id));
         }
 
         // Context should be cleared after scope drops

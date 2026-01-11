@@ -4,6 +4,9 @@
 //! for distributed coordination.
 
 #![allow(unused_imports)]
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::significant_drop_tightening)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -219,11 +222,22 @@ pub enum ElectionEvent {
     /// This node became leader.
     BecameLeader,
     /// This node became follower.
-    BecameFollower { leader_id: String },
+    BecameFollower {
+        /// The ID of the new leader.
+        leader_id: String,
+    },
     /// Leader changed.
-    LeaderChanged { old: Option<String>, new: String },
+    LeaderChanged {
+        /// The ID of the old leader.
+        old: Option<String>,
+        /// The ID of the new leader.
+        new: String,
+    },
     /// Election started.
-    ElectionStarted { term: u64 },
+    ElectionStarted {
+        /// The term number.
+        term: u64,
+    },
     /// Election timeout (no leader).
     ElectionTimeout,
 }
@@ -501,11 +515,13 @@ impl LeaderElection {
 }
 
 /// Failure detector for monitoring node health.
+#[allow(dead_code)]
 pub struct FailureDetector {
     config: ElectionConfig,
     last_seen: HashMap<String, Instant>,
 }
 
+#[allow(dead_code)]
 impl FailureDetector {
     /// Creates a new failure detector.
     #[must_use]

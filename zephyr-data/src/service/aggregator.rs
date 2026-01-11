@@ -6,6 +6,8 @@
 //! - Market snapshots for point-in-time queries
 //! - Historical data retrieval
 
+#![allow(clippy::disallowed_types)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -37,75 +39,71 @@ impl KlineAggregator {
     pub async fn process_tick(&self, tick: &TickData, period: KlinePeriod) -> Option<KlineData> {
         let mut current = self.current_kline.write().await;
 
-        match current.as_mut() {
-            Some(kline) => {
-                // Update existing K-line
-                if kline.high < tick.price {
-                    kline.high = tick.price;
-                }
-                if kline.low > tick.price {
-                    kline.low = tick.price;
-                }
-                kline.close = tick.price;
-                kline.volume =
-                    Quantity::new(kline.volume.as_decimal() + tick.volume.as_decimal()).ok()?;
+        if let Some(kline) = current.as_mut() {
+            // Update existing K-line
+            if kline.high < tick.price {
+                kline.high = tick.price;
+            }
+            if kline.low > tick.price {
+                kline.low = tick.price;
+            }
+            kline.close = tick.price;
+            kline.volume =
+                Quantity::new(kline.volume.as_decimal() + tick.volume.as_decimal()).ok()?;
 
-                // Check if we need to close this K-line
-                if self.should_close_kline(kline.timestamp, tick.timestamp, period) {
-                    let completed = kline.clone();
-                    *current = None;
+            // Check if we need to close this K-line
+            if Self::should_close_kline_static(kline.timestamp, tick.timestamp, period) {
+                let completed = kline.clone();
+                *current = None;
 
-                    // Store completed K-line
-                    let mut completed_klines = self.completed_klines.write().await;
-                    completed_klines.push(completed.clone());
+                // Store completed K-line
+                self.completed_klines.write().await.push(completed.clone());
 
-                    return Some(completed);
-                }
+                Some(completed)
+            } else {
                 None
             }
-            None => {
-                // Start new K-line
-                let new_kline = KlineData::builder()
-                    .symbol(tick.symbol.clone())
-                    .timestamp(self.get_kline_start_time(tick.timestamp, period))
-                    .period(period)
-                    .open(tick.price)
-                    .high(tick.price)
-                    .low(tick.price)
-                    .close(tick.price)
-                    .volume(tick.volume)
-                    .turnover(Amount::new(tick.price.as_decimal() * tick.volume.as_decimal()).ok()?)
-                    .build()
-                    .ok()?;
+        } else {
+            // Start new K-line
+            let new_kline = KlineData::builder()
+                .symbol(tick.symbol.clone())
+                .timestamp(Self::get_kline_start_time_static(tick.timestamp, period))
+                .period(period)
+                .open(tick.price)
+                .high(tick.price)
+                .low(tick.price)
+                .close(tick.price)
+                .volume(tick.volume)
+                .turnover(Amount::new(tick.price.as_decimal() * tick.volume.as_decimal()).ok()?)
+                .build()
+                .ok()?;
 
-                *current = Some(new_kline);
-                None
-            }
+            *current = Some(new_kline);
+            None
         }
     }
 
     /// Determines if a K-line should be closed.
-    fn should_close_kline(
-        &self,
+    fn should_close_kline_static(
         kline_start: Timestamp,
         tick_time: Timestamp,
         period: KlinePeriod,
     ) -> bool {
-        let period_ms = self.period_to_ms(period);
+        let period_ms = Self::period_to_ms_static(period);
         let elapsed = tick_time.as_millis() - kline_start.as_millis();
         elapsed >= period_ms
     }
 
-    /// Gets the start time of a K-line for a given timestamp.
-    fn get_kline_start_time(&self, timestamp: Timestamp, period: KlinePeriod) -> Timestamp {
-        let period_ms = self.period_to_ms(period);
+    /// Gets the start time of a K-line for a given timestamp (static version).
+    fn get_kline_start_time_static(timestamp: Timestamp, period: KlinePeriod) -> Timestamp {
+        let period_ms = Self::period_to_ms_static(period);
         let ts_ms = timestamp.as_millis();
         let start_ms = (ts_ms / period_ms) * period_ms;
         Timestamp::new(start_ms).unwrap_or(timestamp)
     }
 
-    /// Converts a K-line period to milliseconds.
-    fn period_to_ms(&self, period: KlinePeriod) -> i64 {
+    /// Converts a K-line period to milliseconds (static version).
+    fn period_to_ms_static(period: KlinePeriod) -> i64 {
         match period {
             KlinePeriod::Minute1 => 60 * 1000,
             KlinePeriod::Minute5 => 5 * 60 * 1000,
@@ -165,33 +163,40 @@ impl DataAggregator {
     /// Processes a tick and updates snapshots and aggregators.
     pub async fn process_tick(&self, tick: &TickData) {
         // Update snapshot
-        let mut snapshots = self.snapshots.write().await;
-        let snapshot = snapshots
-            .entry(tick.symbol.clone())
-            .or_insert_with(|| MarketSnapshot::new(tick.symbol.clone()));
-        snapshot.update_tick(tick.clone());
+        {
+            let mut snapshots = self.snapshots.write().await;
+            let snapshot = snapshots
+                .entry(tick.symbol.clone())
+                .or_insert_with(|| MarketSnapshot::new(tick.symbol.clone()));
+            snapshot.update_tick(tick.clone());
+            drop(snapshots);
+        }
     }
 
     /// Stores a K-line in historical storage.
     pub async fn store_kline(&self, kline: &KlineData) {
-        let mut historical = self.historical_klines.write().await;
-        let entry = historical
+        self.historical_klines
+            .write()
+            .await
             .entry(kline.symbol.clone())
-            .or_insert_with(Vec::new);
-        entry.push(kline.clone());
+            .or_insert_with(Vec::new)
+            .push(kline.clone());
     }
 
     /// Gets a market snapshot for a symbol.
+    #[must_use]
     pub fn get_snapshot(&self, symbol: &Symbol) -> Option<MarketSnapshot> {
         let rt = tokio::runtime::Handle::try_current();
-        if let Ok(handle) = rt {
+        rt.map_or(None, |handle| {
             handle.block_on(async { self.snapshots.read().await.get(symbol).cloned() })
-        } else {
-            None
-        }
+        })
     }
 
     /// Gets historical K-line data.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the time range is invalid or the symbol is not found.
     pub async fn get_historical(
         &self,
         symbol: &Symbol,
@@ -206,16 +211,19 @@ impl DataAggregator {
             });
         }
 
-        let historical = self.historical_klines.read().await;
-        let klines = historical
-            .get(symbol)
-            .ok_or_else(|| DataServiceError::SymbolNotFound(symbol.to_string()))?;
-
-        let filtered: Vec<KlineData> = klines
-            .iter()
-            .filter(|k| k.timestamp >= start && k.timestamp < end)
-            .cloned()
-            .collect();
+        let filtered: Vec<KlineData> = {
+            let historical = self.historical_klines.read().await;
+            let klines = historical
+                .get(symbol)
+                .ok_or_else(|| DataServiceError::SymbolNotFound(symbol.to_string()))?;
+            let result = klines
+                .iter()
+                .filter(|k| k.timestamp >= start && k.timestamp < end)
+                .cloned()
+                .collect();
+            drop(historical);
+            result
+        };
 
         Ok(filtered)
     }
@@ -249,7 +257,7 @@ mod tests {
     fn create_test_tick(price: Decimal, volume: Decimal) -> TickData {
         TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new(price).unwrap())
             .volume(Quantity::new(volume).unwrap())
             .bid_price(Price::new(price - dec!(1)).unwrap())
@@ -263,7 +271,7 @@ mod tests {
     fn create_test_kline() -> KlineData {
         KlineData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .period(KlinePeriod::Hour1)
             .open(Price::new(dec!(42000)).unwrap())
             .high(Price::new(dec!(42500)).unwrap())
@@ -324,8 +332,8 @@ mod tests {
             .get_historical(
                 &kline.symbol,
                 kline.period,
-                Timestamp::new(1704067200000).unwrap(),
-                Timestamp::new(1704067300000).unwrap(),
+                Timestamp::new(1_704_067_200_000).unwrap(),
+                Timestamp::new(1_704_067_300_000).unwrap(),
             )
             .await;
 

@@ -5,15 +5,15 @@
 //!
 //! # Types
 //!
-//! - [`Price`] - Asset price values
-//! - [`Quantity`] - Trading quantities
-//! - [`Amount`] - Monetary amounts (price × quantity)
-//! - [`Symbol`] - Trading pair identifiers
-//! - [`OrderId`] - Order identifiers
-//! - [`Timestamp`] - Unix millisecond timestamps
-//! - [`Leverage`] - Leverage multipliers
-//! - [`FundingRate`] - Perpetual contract funding rates
-//! - [`MarkPrice`] - Mark price values
+//! - Price - Asset price values
+//! - Quantity - Trading quantities
+//! - Amount - Monetary amounts (price × quantity)
+//! - Symbol - Trading pair identifiers
+//! - OrderId - Order identifiers
+//! - Timestamp - Unix millisecond timestamps
+//! - Leverage - Leverage multipliers
+//! - FundingRate - Perpetual contract funding rates
+//! - MarkPrice - Mark price values
 
 mod amount;
 mod funding_rate;

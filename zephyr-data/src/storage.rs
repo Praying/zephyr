@@ -463,7 +463,7 @@ mod tests {
 
         let tick = TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new("42000".parse().unwrap()).unwrap())
             .volume(Quantity::new("0.5".parse().unwrap()).unwrap())
             .bid_price(Price::new("41999".parse().unwrap()).unwrap())
@@ -493,7 +493,7 @@ mod tests {
 
         let kline = KlineData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .period(zephyr_core::data::KlinePeriod::Hour1)
             .open(Price::new("42000".parse().unwrap()).unwrap())
             .high(Price::new("42500".parse().unwrap()).unwrap())
@@ -524,7 +524,7 @@ mod tests {
 
         let tick = TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new("42000".parse().unwrap()).unwrap())
             .volume(Quantity::new("0.5".parse().unwrap()).unwrap())
             .bid_price(Price::new("41999".parse().unwrap()).unwrap())

@@ -21,7 +21,7 @@ use crate::BacktestArgs;
 /// # Errors
 ///
 /// Returns error if backtest fails.
-pub async fn run(args: BacktestArgs) -> Result<()> {
+pub fn run(args: &BacktestArgs) -> Result<()> {
     info!("Starting backtest with strategy: {}", args.strategy);
 
     // Parse initial capital
@@ -104,7 +104,7 @@ pub async fn run(args: BacktestArgs) -> Result<()> {
     };
 
     // Output results
-    output_results(&results, &args.output, args.output_file.as_deref())?;
+    output_results(&results, args.output.as_str(), args.output_file.as_deref())?;
 
     info!("Backtest completed successfully");
 
@@ -157,7 +157,7 @@ fn output_results(
     let output = match format {
         "json" => serde_json::to_string_pretty(results)?,
         "csv" => results_to_csv(results),
-        "table" | _ => results_to_table(results),
+        _ => results_to_table(results),
     };
 
     if let Some(file_path) = output_file {
@@ -170,106 +170,157 @@ fn output_results(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn results_to_table(results: &BacktestResults) -> String {
+    use std::fmt::Write;
     let mut output = String::new();
 
-    output.push_str("\n");
-    output.push_str("╔══════════════════════════════════════════════════════════════╗\n");
-    output.push_str("║                    BACKTEST RESULTS                          ║\n");
-    output.push_str("╠══════════════════════════════════════════════════════════════╣\n");
-    output.push_str(&format!(
-        "║ Initial Capital:     {:>38} ║\n",
+    writeln!(output).unwrap();
+    writeln!(
+        output,
+        "╔══════════════════════════════════════════════════════════════╗"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║                    BACKTEST RESULTS                          ║"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "╠══════════════════════════════════════════════════════════════╣"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Initial Capital:     {:>38} ║",
         results.initial_capital.as_decimal()
-    ));
-    output.push_str(&format!(
-        "║ Final Equity:        {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Final Equity:        {:>38} ║",
         results.final_equity.as_decimal()
-    ));
-    output.push_str(&format!(
-        "║ Total PnL:           {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Total PnL:           {:>38} ║",
         results.total_pnl.as_decimal()
-    ));
-    output.push_str(&format!(
-        "║ Total Return:        {:>37}% ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Total Return:        {:>37}% ║",
         results.total_return_pct
-    ));
-    output.push_str("╠══════════════════════════════════════════════════════════════╣\n");
-    output.push_str(&format!(
-        "║ Max Drawdown:        {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "╠══════════════════════════════════════════════════════════════╣"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Max Drawdown:        {:>38} ║",
         results.max_drawdown.as_decimal()
-    ));
-    output.push_str(&format!(
-        "║ Max Drawdown %:      {:>37}% ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Max Drawdown %:      {:>37}% ║",
         results.max_drawdown_pct
-    ));
-    output.push_str(&format!(
-        "║ Sharpe Ratio:        {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Sharpe Ratio:        {:>38} ║",
         results
             .sharpe_ratio
-            .map_or("N/A".to_string(), |s| format!("{s:.4}"))
-    ));
-    output.push_str("╠══════════════════════════════════════════════════════════════╣\n");
-    output.push_str(&format!(
-        "║ Total Trades:        {:>38} ║\n",
+            .map_or_else(|| "N/A".to_string(), |s| format!("{s:.4}"))
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "╠══════════════════════════════════════════════════════════════╣"
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Total Trades:        {:>38} ║",
         results.total_trades
-    ));
-    output.push_str(&format!(
-        "║ Winning Trades:      {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Winning Trades:      {:>38} ║",
         results.winning_trades
-    ));
-    output.push_str(&format!(
-        "║ Losing Trades:       {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Losing Trades:       {:>38} ║",
         results.losing_trades
-    ));
-    output.push_str(&format!(
-        "║ Win Rate:            {:>37}% ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Win Rate:            {:>37}% ║",
         results.win_rate * dec!(100)
-    ));
-    output.push_str(&format!(
-        "║ Profit Factor:       {:>38} ║\n",
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "║ Profit Factor:       {:>38} ║",
         results
             .profit_factor
-            .map_or("N/A".to_string(), |p| format!("{p:.4}"))
-    ));
-    output.push_str("╚══════════════════════════════════════════════════════════════╝\n");
+            .map_or_else(|| "N/A".to_string(), |p| format!("{p:.4}"))
+    )
+    .unwrap();
+    writeln!(
+        output,
+        "╚══════════════════════════════════════════════════════════════╝"
+    )
+    .unwrap();
 
     output
 }
 
 fn results_to_csv(results: &BacktestResults) -> String {
+    use std::fmt::Write;
     let mut csv = String::from("metric,value\n");
 
-    csv.push_str(&format!(
-        "initial_capital,{}\n",
+    writeln!(
+        csv,
+        "initial_capital,{}",
         results.initial_capital.as_decimal()
-    ));
-    csv.push_str(&format!(
-        "final_equity,{}\n",
-        results.final_equity.as_decimal()
-    ));
-    csv.push_str(&format!("total_pnl,{}\n", results.total_pnl.as_decimal()));
-    csv.push_str(&format!("total_return_pct,{}\n", results.total_return_pct));
-    csv.push_str(&format!(
-        "max_drawdown,{}\n",
-        results.max_drawdown.as_decimal()
-    ));
-    csv.push_str(&format!("max_drawdown_pct,{}\n", results.max_drawdown_pct));
-    csv.push_str(&format!(
-        "sharpe_ratio,{}\n",
+    )
+    .unwrap();
+    writeln!(csv, "final_equity,{}", results.final_equity.as_decimal()).unwrap();
+    writeln!(csv, "total_pnl,{}", results.total_pnl.as_decimal()).unwrap();
+    writeln!(csv, "total_return_pct,{}", results.total_return_pct).unwrap();
+    writeln!(csv, "max_drawdown,{}", results.max_drawdown.as_decimal()).unwrap();
+    writeln!(csv, "max_drawdown_pct,{}", results.max_drawdown_pct).unwrap();
+    writeln!(
+        csv,
+        "sharpe_ratio,{}",
         results
             .sharpe_ratio
-            .map_or("".to_string(), |s| s.to_string())
-    ));
-    csv.push_str(&format!("total_trades,{}\n", results.total_trades));
-    csv.push_str(&format!("winning_trades,{}\n", results.winning_trades));
-    csv.push_str(&format!("losing_trades,{}\n", results.losing_trades));
-    csv.push_str(&format!("win_rate,{}\n", results.win_rate));
-    csv.push_str(&format!(
-        "profit_factor,{}\n",
+            .map_or_else(String::new, |s| s.to_string())
+    )
+    .unwrap();
+    writeln!(csv, "total_trades,{}", results.total_trades).unwrap();
+    writeln!(csv, "winning_trades,{}", results.winning_trades).unwrap();
+    writeln!(csv, "losing_trades,{}", results.losing_trades).unwrap();
+    writeln!(csv, "win_rate,{}", results.win_rate).unwrap();
+    writeln!(
+        csv,
+        "profit_factor,{}",
         results
             .profit_factor
-            .map_or("".to_string(), |p| p.to_string())
-    ));
+            .map_or_else(String::new, |p| p.to_string())
+    )
+    .unwrap();
 
     csv
 }

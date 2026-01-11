@@ -353,8 +353,10 @@ mod tests {
 
     #[test]
     fn test_quota_check() {
-        let mut quota = ResourceQuota::default();
-        quota.max_strategies = 10;
+        let quota = ResourceQuota {
+            max_strategies: 10,
+            ..Default::default()
+        };
 
         let mut tenant = Tenant::new("Acme Corp", "acme-corp", quota);
         tenant.usage.strategies = 8;

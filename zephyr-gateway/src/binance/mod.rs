@@ -1,8 +1,8 @@
 //! Binance exchange adapter.
 //!
 //! This module provides adapters for Binance exchange:
-//! - [`BinanceParser`] - Market data parser for WebSocket streams
-//! - [`BinanceTrader`] - Trading gateway for REST/WebSocket API
+//! - BinanceParser - Market data parser for WebSocket streams
+//! - BinanceTrader - Trading gateway for REST/WebSocket API
 //!
 //! # Supported Markets
 //!

@@ -286,10 +286,10 @@ impl BacktestMetrics {
             Decimal::ZERO
         };
 
-        let profit_factor = if !gross_loss.is_zero() {
-            Some(gross_profit.as_decimal() / gross_loss.as_decimal())
-        } else {
+        let profit_factor = if gross_loss.is_zero() {
             None
+        } else {
+            Some(gross_profit.as_decimal() / gross_loss.as_decimal())
         };
 
         let avg_win = if winning_count > 0 {
@@ -382,7 +382,7 @@ mod tests {
 
     fn create_trade(pnl: Decimal, is_win: bool) -> TradeRecord {
         TradeRecord {
-            timestamp: Timestamp::new(1704067200000).unwrap(),
+            timestamp: Timestamp::new(1_704_067_200_000).unwrap(),
             pnl: Amount::new(pnl).unwrap(),
             value: Amount::new(dec!(1000)).unwrap(),
             is_win,

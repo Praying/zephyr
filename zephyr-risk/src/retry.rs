@@ -540,8 +540,7 @@ mod tests {
         };
         let policy = RetryPolicy::new(config);
 
-        let delays: Vec<_> = policy.into_iter().collect();
-        assert_eq!(delays.len(), 2); // 2 retries (attempts 1 and 2)
+        assert_eq!(policy.into_iter().count(), 2); // 2 retries (attempts 1 and 2)
     }
 
     #[test]

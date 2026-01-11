@@ -1,5 +1,8 @@
 //! UFT (Ultra-High Frequency Trading) Strategy Context Implementation.
 
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 
@@ -24,6 +27,7 @@ pub struct OrderIdPool {
 }
 
 impl OrderIdPool {
+    /// Creates a new order ID pool with the given prefix and capacity.
     #[must_use]
     pub fn new(prefix: impl Into<String>, capacity: usize) -> Self {
         let prefix = prefix.into();
@@ -39,6 +43,7 @@ impl OrderIdPool {
         }
     }
 
+    /// Gets an order ID from the pool, or generates a new one if empty.
     #[must_use]
     pub fn get(&self) -> OrderId {
         self.pool.pop().unwrap_or_else(|| {
@@ -47,6 +52,7 @@ impl OrderIdPool {
         })
     }
 
+    /// Returns an order ID to the pool for reuse.
     pub fn return_id(&self, id: OrderId) {
         let _ = self.pool.push(id);
     }
@@ -60,6 +66,7 @@ pub struct TickRingBuffer {
 }
 
 impl TickRingBuffer {
+    /// Creates a new tick ring buffer with the given capacity.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         let buffer = (0..capacity)
@@ -73,11 +80,13 @@ impl TickRingBuffer {
         }
     }
 
+    /// Pushes a tick into the ring buffer.
     pub fn push(&mut self, tick: TickData) {
         let index = self.write_index.fetch_add(1, Ordering::Relaxed) as usize % self.capacity;
         self.buffer[index] = Some(tick);
     }
 
+    /// Returns the latest tick in the buffer.
     #[must_use]
     pub fn latest(&self) -> Option<&TickData> {
         let index = self.write_index.load(Ordering::Relaxed);
@@ -87,11 +96,13 @@ impl TickRingBuffer {
         self.buffer[((index - 1) as usize) % self.capacity].as_ref()
     }
 
+    /// Returns the number of ticks in the buffer.
     #[must_use]
     pub fn len(&self) -> usize {
         (self.write_index.load(Ordering::Relaxed) as usize).min(self.capacity)
     }
 
+    /// Returns true if the buffer is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.write_index.load(Ordering::Relaxed) == 0
@@ -104,11 +115,13 @@ pub struct HardwareTimestamp {
 }
 
 impl HardwareTimestamp {
+    /// Creates a new hardware timestamp provider.
     #[must_use]
     pub fn new(enabled: bool) -> Self {
         Self { enabled }
     }
 
+    /// Returns the current timestamp in nanoseconds.
     #[must_use]
     pub fn now_ns(&self) -> i64 {
         if self.enabled {
@@ -159,6 +172,7 @@ pub struct UftStrategyContextImpl {
 }
 
 impl UftStrategyContextImpl {
+    /// Creates a new UFT strategy context.
     #[must_use]
     pub fn new(strategy_name: impl Into<String>, config: UftEngineConfig) -> Self {
         let strategy_name = strategy_name.into();
@@ -180,11 +194,13 @@ impl UftStrategyContextImpl {
         }
     }
 
+    /// Returns the engine configuration.
     #[must_use]
     pub fn config(&self) -> &UftEngineConfig {
         &self.config
     }
 
+    /// Drains all pending order submissions from the queue.
     pub fn drain_orders(&self) -> Vec<OrderSubmission> {
         let mut orders = Vec::new();
         while let Some(submission) = self.order_queue.pop() {
@@ -193,6 +209,7 @@ impl UftStrategyContextImpl {
         orders
     }
 
+    /// Updates the tick data for a symbol.
     pub fn update_tick(&self, tick: TickData) {
         let symbol = tick.symbol.clone();
         self.prices.insert(symbol.clone(), tick.price);
@@ -203,11 +220,13 @@ impl UftStrategyContextImpl {
             .push(tick);
     }
 
+    /// Updates the order book for a symbol.
     pub fn update_orderbook(&self, orderbook: OrderBook) {
         self.orderbooks
             .insert(orderbook.symbol.clone(), RwLock::new(orderbook));
     }
 
+    /// Updates the position for a symbol.
     pub fn update_position(&self, symbol: &Symbol, quantity: Quantity) {
         use rust_decimal::prelude::ToPrimitive;
         let scaled = quantity
@@ -221,6 +240,7 @@ impl UftStrategyContextImpl {
             .store(scaled, Ordering::Relaxed);
     }
 
+    /// Handles an order update event.
     pub fn on_order_update(&self, order: Order) {
         let symbol = order.symbol.clone();
         let order_id = order.order_id.clone();
@@ -238,6 +258,7 @@ impl UftStrategyContextImpl {
         }
     }
 
+    /// Handles a trade event.
     pub fn on_trade(&self, trade: &zephyr_core::traits::Trade) {
         use rust_decimal::prelude::ToPrimitive;
         let change = match trade.side {
@@ -390,6 +411,7 @@ pub struct UftStrategyRunner {
 }
 
 impl UftStrategyRunner {
+    /// Creates a new UFT strategy runner.
     #[must_use]
     pub fn new(strategy: Box<dyn UftStrategy>, context: Arc<UftStrategyContextImpl>) -> Self {
         Self {
@@ -399,6 +421,7 @@ impl UftStrategyRunner {
         }
     }
 
+    /// Starts the strategy runner.
     pub fn start(&mut self) {
         if self.running.load(Ordering::Relaxed) {
             warn!(strategy = %self.strategy.name(), "UFT strategy already running");
@@ -410,6 +433,7 @@ impl UftStrategyRunner {
         info!(strategy = %self.strategy.name(), "UFT strategy started");
     }
 
+    /// Stops the strategy runner.
     pub fn stop(&mut self) {
         if !self.running.load(Ordering::Relaxed) {
             return;
@@ -420,11 +444,13 @@ impl UftStrategyRunner {
         info!(strategy = %self.strategy.name(), "UFT strategy stopped");
     }
 
+    /// Returns true if the strategy is running.
     #[must_use]
     pub fn is_running(&self) -> bool {
         self.running.load(Ordering::Relaxed)
     }
 
+    /// Handles a tick event.
     pub fn on_tick(&mut self, tick: &TickData) {
         if !self.running.load(Ordering::Relaxed) {
             return;
@@ -433,6 +459,7 @@ impl UftStrategyRunner {
         self.strategy.on_tick(self.context.as_ref(), tick);
     }
 
+    /// Handles an order book event.
     pub fn on_orderbook(&mut self, orderbook: &OrderBook) {
         if !self.running.load(Ordering::Relaxed) {
             return;
@@ -441,6 +468,7 @@ impl UftStrategyRunner {
         self.strategy.on_orderbook(self.context.as_ref(), orderbook);
     }
 
+    /// Handles an order event.
     pub fn on_order(&mut self, order: &Order) {
         if !self.running.load(Ordering::Relaxed) {
             return;
@@ -449,6 +477,7 @@ impl UftStrategyRunner {
         self.strategy.on_order(self.context.as_ref(), order);
     }
 
+    /// Handles a trade event.
     pub fn on_trade(&mut self, trade: &zephyr_core::traits::Trade) {
         if !self.running.load(Ordering::Relaxed) {
             return;
@@ -457,16 +486,19 @@ impl UftStrategyRunner {
         self.strategy.on_trade(self.context.as_ref(), trade);
     }
 
+    /// Returns the strategy name.
     #[must_use]
     pub fn name(&self) -> &str {
         self.strategy.name()
     }
 
+    /// Returns the strategy context.
     #[must_use]
     pub fn context(&self) -> &Arc<UftStrategyContextImpl> {
         &self.context
     }
 
+    /// Drains all pending order submissions from the context.
     pub fn drain_orders(&self) -> Vec<OrderSubmission> {
         self.context.drain_orders()
     }

@@ -3,6 +3,8 @@
 //! This module provides Python-compatible wrappers for strategy contexts,
 //! allowing Python strategies to interact with the Zephyr trading engine.
 
+#![allow(clippy::unnecessary_wraps, clippy::map_unwrap_or, clippy::unused_async)]
+
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -280,30 +282,25 @@ impl PyCtaStrategyContext {
         let _period = PyKlinePeriod::from_str(period)?;
         let key = format!("{}_{}", symbol.0.as_str(), period);
 
-        let klines = self
-            .klines
-            .get(&key)
-            .map(|klines| {
-                let start = klines.len().saturating_sub(count);
-                &klines[start..]
-            })
-            .unwrap_or(&[]);
+        let klines = self.klines.get(&key).map_or_else(Vec::new, |klines| {
+            let start = klines.len().saturating_sub(count);
+            klines[start..].to_vec()
+        });
 
-        numpy_conv::klines_to_numpy(py, klines)
+        numpy_conv::klines_to_numpy(py, &klines)
     }
 
     /// Gets recent tick data for a symbol.
     pub fn get_ticks(&self, symbol: &PySymbol, count: usize) -> Vec<PyTickData> {
         self.ticks
             .get(symbol.0.as_str())
-            .map(|ticks| {
+            .map_or_else(Vec::new, |ticks| {
                 let start = ticks.len().saturating_sub(count);
                 ticks[start..]
                     .iter()
                     .map(|t| PyTickData::from_core(t.clone()))
                     .collect()
             })
-            .unwrap_or_default()
     }
 
     /// Gets recent tick data as NumPy arrays.
@@ -347,19 +344,19 @@ impl PyCtaStrategyContext {
         let core_level = level.to_core();
         match core_level {
             zephyr_core::traits::LogLevel::Trace => {
-                tracing::trace!(strategy = %self.name, "{}", message)
+                tracing::trace!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Debug => {
-                tracing::debug!(strategy = %self.name, "{}", message)
+                tracing::debug!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Info => {
-                tracing::info!(strategy = %self.name, "{}", message)
+                tracing::info!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Warn => {
-                tracing::warn!(strategy = %self.name, "{}", message)
+                tracing::warn!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Error => {
-                tracing::error!(strategy = %self.name, "{}", message)
+                tracing::error!(strategy = %self.name, "{}", message);
             }
         }
     }
@@ -566,19 +563,19 @@ impl PyHftStrategyContext {
         let core_level = level.to_core();
         match core_level {
             zephyr_core::traits::LogLevel::Trace => {
-                tracing::trace!(strategy = %self.name, "{}", message)
+                tracing::trace!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Debug => {
-                tracing::debug!(strategy = %self.name, "{}", message)
+                tracing::debug!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Info => {
-                tracing::info!(strategy = %self.name, "{}", message)
+                tracing::info!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Warn => {
-                tracing::warn!(strategy = %self.name, "{}", message)
+                tracing::warn!(strategy = %self.name, "{}", message);
             }
             zephyr_core::traits::LogLevel::Error => {
-                tracing::error!(strategy = %self.name, "{}", message)
+                tracing::error!(strategy = %self.name, "{}", message);
             }
         }
     }

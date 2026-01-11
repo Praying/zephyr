@@ -1,6 +1,6 @@
-//! DualThrust Strategy Execution Example
+//! `DualThrust` Strategy Execution Example
 //!
-//! This example demonstrates how to run the DualThrust CTA strategy
+//! This example demonstrates how to run the `DualThrust` CTA strategy
 //! using the Zephyr engine.
 //!
 //! # Running
@@ -13,7 +13,7 @@
 //!
 //! The execution flow follows Zephyr's M+1+N architecture:
 //! 1. Strategy generates position signals via `set_position()`
-//! 2. SignalAggregator collects and merges signals from multiple strategies
+//! 2. `SignalAggregator` collects and merges signals from multiple strategies
 //! 3. Execution layer (not shown) converts aggregated positions to orders
 //!
 //! ```text
@@ -28,6 +28,8 @@
 //! │ Context         │     │ Position         │
 //! └─────────────────┘     └──────────────────┘
 //! ```
+
+#![allow(clippy::too_many_lines)]
 
 use std::sync::Arc;
 
@@ -45,14 +47,15 @@ use zephyr_engine::{
 /// Creates mock historical daily bars for testing.
 /// In production, this data would come from a data service.
 fn create_historical_bars(symbol: &Symbol, days: usize) -> Vec<KlineData> {
-    let base_ts = 1704067200000i64; // 2024-01-01 00:00:00 UTC
+    let base_ts = 1_704_067_200_000i64; // 2024-01-01 00:00:00 UTC
     let day_ms = 24 * 60 * 60 * 1000i64;
 
     (0..days)
         .map(|i| {
-            let ts = base_ts + (i as i64) * day_ms;
+            let ts = base_ts + i64::try_from(i).unwrap_or(0) * day_ms;
             // Simulate price movement with some volatility
-            let base_price = dec!(40000) + rust_decimal::Decimal::from(i as i64) * dec!(200);
+            let base_price = dec!(40000)
+                + rust_decimal::Decimal::from(i64::try_from(i).unwrap_or(0)) * dec!(200);
             let volatility = dec!(500);
 
             KlineData {
@@ -177,7 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("📅 Simulating Trading Day");
     info!("═══════════════════════════════════════════════════════════════");
 
-    let today_ts = 1704067200000i64 + 10 * 24 * 60 * 60 * 1000; // Day 10
+    let today_ts = 1_704_067_200_000i64 + 10 * 24 * 60 * 60 * 1000; // Day 10
     let today_open = dec!(42000);
 
     // Calculate expected boundaries for reference
@@ -221,7 +224,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (i, (price, description)) in tick_scenarios.iter().enumerate() {
-        let tick_ts = today_ts + (i as i64 + 1) * 60 * 1000; // 1 minute intervals
+        let tick_ts = today_ts + i64::try_from(i).unwrap_or(0) * 60 * 1000; // 1 minute intervals
         let tick = create_tick(&symbol, *price, tick_ts);
 
         context.set_current_time(Timestamp::new_unchecked(tick_ts));
@@ -229,8 +232,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let position = signal_aggregator.get_total_position(&symbol);
         let pos_str = match position.as_decimal() {
-            p if p > rust_decimal::Decimal::ZERO => format!("+{} (LONG)", p),
-            p if p < rust_decimal::Decimal::ZERO => format!("{} (SHORT)", p),
+            p if p > rust_decimal::Decimal::ZERO => format!("+{p} (LONG)"),
+            p if p < rust_decimal::Decimal::ZERO => format!("{p} (SHORT)"),
             _ => "0 (FLAT)".to_string(),
         };
 

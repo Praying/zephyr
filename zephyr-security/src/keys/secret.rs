@@ -277,7 +277,7 @@ mod tests {
     #[test]
     fn test_secret_debug_redacted() {
         let secret = Secret::new(b"sensitive".to_vec());
-        let debug = format!("{:?}", secret);
+        let debug = format!("{secret:?}");
         assert!(debug.contains("REDACTED"));
         assert!(!debug.contains("sensitive"));
     }
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn test_secret_display_redacted() {
         let secret = Secret::new(b"sensitive".to_vec());
-        let display = format!("{}", secret);
+        let display = format!("{secret}");
         assert_eq!(display, "[REDACTED]");
     }
 
@@ -317,7 +317,7 @@ mod tests {
     #[test]
     fn test_masked_secret_display() {
         let masked = MaskedSecret::from_bytes(b"abcdefghij");
-        let display = format!("{}", masked);
+        let display = format!("{masked}");
         assert_eq!(display, "abc***hij");
     }
 

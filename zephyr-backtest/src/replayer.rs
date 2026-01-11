@@ -204,8 +204,8 @@ impl DataReplayer {
         data.into_iter()
             .filter(|t| {
                 let ts = t.timestamp;
-                let after_start = self.config.start_time.map_or(true, |s| ts >= s);
-                let before_end = self.config.end_time.map_or(true, |e| ts <= e);
+                let after_start = self.config.start_time.is_none_or(|s| ts >= s);
+                let before_end = self.config.end_time.is_none_or(|e| ts <= e);
                 after_start && before_end
             })
             .collect()
@@ -216,8 +216,8 @@ impl DataReplayer {
         data.into_iter()
             .filter(|k| {
                 let ts = k.timestamp;
-                let after_start = self.config.start_time.map_or(true, |s| ts >= s);
-                let before_end = self.config.end_time.map_or(true, |e| ts <= e);
+                let after_start = self.config.start_time.is_none_or(|s| ts >= s);
+                let before_end = self.config.end_time.is_none_or(|e| ts <= e);
                 after_start && before_end
             })
             .collect()
@@ -233,27 +233,27 @@ impl DataReplayer {
         // Add initial entries to the queue
         for (idx, symbol) in self.symbols.iter().enumerate() {
             // Add first tick if available
-            if let Some(ticks) = self.tick_data.get(symbol) {
-                if !ticks.is_empty() {
-                    self.queue.push(QueueEntry {
-                        timestamp: ticks[0].timestamp,
-                        symbol_idx: idx,
-                        is_tick: true,
-                        data_idx: 0,
-                    });
-                }
+            if let Some(ticks) = self.tick_data.get(symbol)
+                && !ticks.is_empty()
+            {
+                self.queue.push(QueueEntry {
+                    timestamp: ticks[0].timestamp,
+                    symbol_idx: idx,
+                    is_tick: true,
+                    data_idx: 0,
+                });
             }
 
             // Add first kline if available
-            if let Some(klines) = self.kline_data.get(symbol) {
-                if !klines.is_empty() {
-                    self.queue.push(QueueEntry {
-                        timestamp: klines[0].timestamp,
-                        symbol_idx: idx,
-                        is_tick: false,
-                        data_idx: 0,
-                    });
-                }
+            if let Some(klines) = self.kline_data.get(symbol)
+                && !klines.is_empty()
+            {
+                self.queue.push(QueueEntry {
+                    timestamp: klines[0].timestamp,
+                    symbol_idx: idx,
+                    is_tick: false,
+                    data_idx: 0,
+                });
             }
         }
 
@@ -499,8 +499,7 @@ mod tests {
             .add_tick_data(Symbol::new("BTC-USDT").unwrap(), ticks)
             .unwrap();
 
-        let events: Vec<_> = replayer.collect();
-        assert_eq!(events.len(), 3); // Only 2000, 3000, 4000
+        assert_eq!(replayer.count(), 3); // Only 2000, 3000, 4000
     }
 
     #[test]
@@ -522,8 +521,7 @@ mod tests {
 
         // Reset and replay
         replayer.reset();
-        let events2: Vec<_> = replayer.collect();
-        assert_eq!(events2.len(), 2);
+        assert_eq!(replayer.count(), 2);
     }
 
     #[test]

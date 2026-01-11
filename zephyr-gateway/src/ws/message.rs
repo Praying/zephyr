@@ -239,8 +239,8 @@ mod tests {
         let ping = WebSocketMessage::ping(vec![]);
         assert!(ping.is_ping());
 
-        let pong = WebSocketMessage::pong(vec![]);
-        assert!(pong.is_pong());
+        let pong_msg = WebSocketMessage::pong(vec![]);
+        assert!(pong_msg.is_pong());
 
         let close = WebSocketMessage::close(1000, "normal");
         assert!(close.is_close());

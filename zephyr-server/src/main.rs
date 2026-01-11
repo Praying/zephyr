@@ -3,6 +3,8 @@
 //! Main entry point for the Zephyr cryptocurrency trading system.
 //!
 //! # Usage
+
+#![allow(clippy::clone_on_copy)]
 //!
 //! ```bash
 //! # Run with default configuration
@@ -89,15 +91,15 @@ fn load_config(args: &Args) -> Result<ServerConfig, Box<dyn std::error::Error>> 
     } else {
         // Use default configuration if file doesn't exist
         eprintln!(
-            "Configuration file not found: {:?}, using defaults",
-            args.config
+            "Configuration file not found: {}, using defaults",
+            args.config.display()
         );
         ServerConfig::default()
     };
 
     // Apply command-line overrides
-    if let Some(ref host) = args.host {
-        config.zephyr.server.host = host.clone();
+    if let Some(host) = &args.host {
+        config.zephyr.server.host.clone_from(host);
     }
     if let Some(port) = args.port {
         config.zephyr.server.port = port;

@@ -236,9 +236,6 @@ impl ExecuteContext for ExecuteContextImpl {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use rust_decimal_macros::dec;
-
     // Note: Full tests would require mocking TraderGateway
     // These are basic structural tests
 

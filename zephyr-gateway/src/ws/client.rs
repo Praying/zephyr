@@ -5,6 +5,7 @@
 #![allow(clippy::future_not_send)]
 #![allow(clippy::redundant_clone)]
 #![allow(clippy::too_many_lines)]
+#![allow(clippy::collapsible_else_if)]
 
 use async_trait::async_trait;
 use futures::stream::{SplitSink, SplitStream};

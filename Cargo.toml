@@ -63,7 +63,7 @@ metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
 
 # Cryptography and security
-ring = "0.17"
+ring = "=0.17.13"
 argon2 = "0.5"
 zeroize = { version = "1.8", features = ["derive"] }
 jsonwebtoken = "9.3"
@@ -99,8 +99,8 @@ proptest = "1.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 # Python bindings (optional)
-pyo3 = { version = "0.23", features = ["extension-module"] }
-numpy = "0.23"
+pyo3 = { version = "0.24.1", features = ["extension-module"] }
+numpy = "0.24"
 
 [workspace.lints.rust]
 unsafe_code = "warn"

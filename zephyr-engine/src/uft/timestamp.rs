@@ -37,6 +37,8 @@
 #![allow(clippy::cast_possible_wrap)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::explicit_iter_loop)]
+#![allow(clippy::uninlined_format_args)]
+#![allow(unsafe_code)]
 
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::time::{Duration, Instant};

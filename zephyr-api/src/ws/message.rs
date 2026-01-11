@@ -325,14 +325,14 @@ mod tests {
     #[test]
     fn test_client_message_ping_serde() {
         let msg = ClientMessage::Ping {
-            timestamp: Some(1234567890),
+            timestamp: Some(1_234_567_890),
         };
         let json = serde_json::to_string(&msg).unwrap();
         assert!(json.contains("ping"));
 
         let parsed: ClientMessage = serde_json::from_str(&json).unwrap();
         if let ClientMessage::Ping { timestamp } = parsed {
-            assert_eq!(timestamp, Some(1234567890));
+            assert_eq!(timestamp, Some(1_234_567_890));
         } else {
             panic!("Wrong message type");
         }
@@ -341,8 +341,8 @@ mod tests {
     #[test]
     fn test_server_message_pong_serde() {
         let msg = ServerMessage::Pong {
-            timestamp: Some(1234567890),
-            server_time: 1234567891,
+            timestamp: Some(1_234_567_890),
+            server_time: 1_234_567_891,
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: ServerMessage = serde_json::from_str(&json).unwrap();
@@ -352,8 +352,8 @@ mod tests {
             server_time,
         } = parsed
         {
-            assert_eq!(timestamp, Some(1234567890));
-            assert_eq!(server_time, 1234567891);
+            assert_eq!(timestamp, Some(1_234_567_890));
+            assert_eq!(server_time, 1_234_567_891);
         } else {
             panic!("Wrong message type");
         }
@@ -378,7 +378,7 @@ mod tests {
             mark_price: "51000".to_string(),
             unrealized_pnl: "100".to_string(),
             leverage: 10,
-            update_time: 1234567890,
+            update_time: 1_234_567_890,
         };
         let msg = ServerMessage::PositionUpdate { data };
         let json = serde_json::to_string(&msg).unwrap();

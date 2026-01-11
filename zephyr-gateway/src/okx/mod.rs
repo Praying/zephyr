@@ -1,8 +1,8 @@
 //! OKX exchange adapter.
 //!
 //! This module provides adapters for OKX exchange:
-//! - [`OkxParser`] - Market data parser for WebSocket streams
-//! - [`OkxTrader`] - Trading gateway for REST/WebSocket API
+//! - OkxParser - Market data parser for WebSocket streams
+//! - OkxTrader - Trading gateway for REST/WebSocket API
 //!
 //! # Supported Markets
 //!

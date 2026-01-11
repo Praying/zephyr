@@ -454,7 +454,7 @@ mod tests {
             position_size: Quantity::new(dec!(1.0)).unwrap(),
             mark_price: MarkPrice::new(dec!(50000)).unwrap(),
             payment: Amount::new(dec!(-5.0)).unwrap(),
-            timestamp: Timestamp::new(1704067200000).unwrap(),
+            timestamp: Timestamp::new(1_704_067_200_000).unwrap(),
         };
 
         let json = serde_json::to_string(&payment).unwrap();

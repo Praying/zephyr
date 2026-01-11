@@ -358,8 +358,8 @@ impl StressTester {
         let covid_crash = StressScenario::historical(
             "COVID-19 Crash",
             "March 2020 Market Crash",
-            Timestamp::new(1583020800000).unwrap_or_else(|_| Timestamp::now()), // March 1, 2020
-            Timestamp::new(1584835200000).unwrap_or_else(|_| Timestamp::now()), // March 22, 2020
+            Timestamp::new(1_583_020_800_000).unwrap_or_else(|_| Timestamp::now()), // March 1, 2020
+            Timestamp::new(1_584_835_200_000).unwrap_or_else(|_| Timestamp::now()), // March 22, 2020
         )
         .with_price_shock(
             Symbol::new("BTC-USDT").unwrap_or_else(|_| Symbol::new_unchecked("BTC-USDT")),
@@ -374,8 +374,8 @@ impl StressTester {
         let ftx_collapse = StressScenario::historical(
             "FTX Collapse",
             "November 2022 FTX Bankruptcy",
-            Timestamp::new(1667779200000).unwrap_or_else(|_| Timestamp::now()), // Nov 7, 2022
-            Timestamp::new(1668556800000).unwrap_or_else(|_| Timestamp::now()), // Nov 16, 2022
+            Timestamp::new(1_667_779_200_000).unwrap_or_else(|_| Timestamp::now()), // Nov 7, 2022
+            Timestamp::new(1_668_556_800_000).unwrap_or_else(|_| Timestamp::now()), // Nov 16, 2022
         )
         .with_price_shock(
             Symbol::new("BTC-USDT").unwrap_or_else(|_| Symbol::new_unchecked("BTC-USDT")),
@@ -390,8 +390,8 @@ impl StressTester {
         let luna_collapse = StressScenario::historical(
             "Luna/UST Collapse",
             "May 2022 Terra Collapse",
-            Timestamp::new(1652054400000).unwrap_or_else(|_| Timestamp::now()), // May 9, 2022
-            Timestamp::new(1652659200000).unwrap_or_else(|_| Timestamp::now()), // May 16, 2022
+            Timestamp::new(1_652_054_400_000).unwrap_or_else(|_| Timestamp::now()), // May 9, 2022
+            Timestamp::new(1_652_659_200_000).unwrap_or_else(|_| Timestamp::now()), // May 16, 2022
         )
         .with_price_shock(
             Symbol::new("BTC-USDT").unwrap_or_else(|_| Symbol::new_unchecked("BTC-USDT")),
@@ -474,8 +474,7 @@ impl StressTester {
         // Get price shock for this symbol, or use default (no change)
         let price_change = scenario
             .get_price_shock(&position.symbol)
-            .map(|s| s.price_change)
-            .unwrap_or(Decimal::ZERO);
+            .map_or(Decimal::ZERO, |s| s.price_change);
 
         // Calculate stressed price
         let stressed_price = position.current_price * (Decimal::ONE + price_change);
@@ -543,7 +542,7 @@ fn uuid_v4() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    format!("{:032x}", timestamp)
+    format!("{timestamp:032x}")
 }
 
 #[cfg(test)]

@@ -3,6 +3,9 @@
 //! Implements the [`MarketDataParser`] trait for Binance WebSocket streams.
 
 #![allow(dead_code)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::wildcard_imports)]
+#![allow(clippy::unnecessary_literal_bound)]
 
 use async_trait::async_trait;
 use parking_lot::RwLock;
@@ -675,14 +678,14 @@ mod tests {
         let parser = BinanceParser::new();
         let trade = BinanceAggTrade {
             event_type: "aggTrade".to_string(),
-            event_time: 1672515782136,
+            event_time: 1_672_515_782_136,
             symbol: "BTCUSDT".to_string(),
-            agg_trade_id: 123456789,
+            agg_trade_id: 123_456_789,
             price: "42000.00".to_string(),
             quantity: "0.001".to_string(),
             first_trade_id: 100,
             last_trade_id: 105,
-            trade_time: 1672515782136,
+            trade_time: 1_672_515_782_136,
             is_buyer_maker: true,
         };
 
@@ -696,13 +699,13 @@ mod tests {
         let parser = BinanceParser::new();
         let ticker = BinanceBookTicker {
             event_type: None,
-            update_id: 400900217,
+            update_id: 400_900_217,
             symbol: "BTCUSDT".to_string(),
             bid_price: "42000.00".to_string(),
             bid_quantity: "10.5".to_string(),
             ask_price: "42002.00".to_string(),
             ask_quantity: "8.3".to_string(),
-            event_time: Some(1672515782136),
+            event_time: Some(1_672_515_782_136),
             transaction_time: None,
         };
 
@@ -717,11 +720,11 @@ mod tests {
         let parser = BinanceParser::new();
         let event = BinanceKlineEvent {
             event_type: "kline".to_string(),
-            event_time: 1672515782136,
+            event_time: 1_672_515_782_136,
             symbol: "BTCUSDT".to_string(),
             kline: BinanceKline {
-                start_time: 1672515780000,
-                close_time: 1672515839999,
+                start_time: 1_672_515_780_000,
+                close_time: 1_672_515_839_999,
                 symbol: "BTCUSDT".to_string(),
                 interval: "1m".to_string(),
                 first_trade_id: 100,

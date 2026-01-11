@@ -4,6 +4,8 @@
 //! across cluster nodes to ensure consistency.
 
 #![allow(unused_imports)]
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::collapsible_if)]
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -21,7 +23,12 @@ use zephyr_core::types::{OrderId, Price, Quantity, Symbol, Timestamp};
 pub enum StateSyncError {
     /// Version conflict during sync.
     #[error("version conflict: local={local}, remote={remote}")]
-    VersionConflict { local: u64, remote: u64 },
+    VersionConflict {
+        /// Local version.
+        local: u64,
+        /// Remote version.
+        remote: u64,
+    },
 
     /// State not found.
     #[error("state not found for key: {0}")]
@@ -218,8 +225,11 @@ impl OrderState {
 pub enum SyncMessage {
     /// Full state snapshot.
     FullSnapshot {
+        /// Position states.
         positions: Vec<PositionState>,
+        /// Order states.
         orders: Vec<OrderState>,
+        /// Snapshot timestamp.
         timestamp: Timestamp,
     },
     /// Incremental position update.
@@ -227,9 +237,15 @@ pub enum SyncMessage {
     /// Incremental order update.
     OrderUpdate(OrderState),
     /// Request for full sync.
-    SyncRequest { from_version: u64 },
+    SyncRequest {
+        /// Version to sync from.
+        from_version: u64,
+    },
     /// Acknowledgment.
-    Ack { message_id: u64 },
+    Ack {
+        /// Message ID being acknowledged.
+        message_id: u64,
+    },
 }
 
 /// State synchronization manager.

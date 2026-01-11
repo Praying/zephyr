@@ -23,6 +23,9 @@
 //! ```
 
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::significant_drop_in_scrutinee)]
+#![allow(clippy::significant_drop_tightening)]
 
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
@@ -329,15 +332,15 @@ impl KillSwitch {
             reason: reason.into(),
             activated_by: None,
         };
-        self.activate_with_trigger(trigger);
+        self.activate_with_trigger(&trigger);
     }
 
     /// Activates the kill switch with a specific trigger.
-    pub fn activate_with_trigger(&self, trigger: KillSwitchTrigger) {
+    pub fn activate_with_trigger(&self, trigger: &KillSwitchTrigger) {
         // Check cooldown
+        let cooldown_secs = self.config.read().cooldown_secs;
         if let Some(last) = *self.last_deactivation.read() {
-            let config = self.config.read();
-            let cooldown_ms = config.cooldown_secs * 1000;
+            let cooldown_ms = cooldown_secs * 1000;
             let elapsed = Timestamp::now().as_millis() - last.as_millis();
             if elapsed < cooldown_ms as i64 {
                 warn!(
@@ -423,33 +426,36 @@ impl KillSwitch {
         }
 
         // Check daily loss trigger
-        if let Some(limit) = daily_limit {
-            if daily_loss.as_decimal().abs() > limit.as_decimal() {
-                self.activate_with_trigger(KillSwitchTrigger::DailyLossLimit {
-                    loss: daily_loss,
-                    limit,
-                });
-                return true;
-            }
+        if let Some(limit) = daily_limit
+            && daily_loss.as_decimal().abs() > limit.as_decimal()
+        {
+            let trigger = KillSwitchTrigger::DailyLossLimit {
+                loss: daily_loss,
+                limit,
+            };
+            self.activate_with_trigger(&trigger);
+            return true;
         }
 
         // Check drawdown trigger
-        if let Some(limit) = drawdown_limit {
-            if drawdown.abs() > limit {
-                self.activate_with_trigger(KillSwitchTrigger::DrawdownLimit { drawdown, limit });
-                return true;
-            }
+        if let Some(limit) = drawdown_limit
+            && drawdown.abs() > limit
+        {
+            let trigger = KillSwitchTrigger::DrawdownLimit { drawdown, limit };
+            self.activate_with_trigger(&trigger);
+            return true;
         }
 
         // Check connectivity loss trigger
-        if let (Some(duration), Some(limit)) = (connectivity_loss_secs, conn_limit) {
-            if duration >= limit {
-                self.activate_with_trigger(KillSwitchTrigger::ConnectivityLoss {
-                    exchange: "unknown".to_string(),
-                    duration_secs: duration,
-                });
-                return true;
-            }
+        if let (Some(duration), Some(limit)) = (connectivity_loss_secs, conn_limit)
+            && duration >= limit
+        {
+            let trigger = KillSwitchTrigger::ConnectivityLoss {
+                exchange: "unknown".to_string(),
+                duration_secs: duration,
+            };
+            self.activate_with_trigger(&trigger);
+            return true;
         }
 
         false
@@ -464,15 +470,13 @@ impl KillSwitch {
 
         *self.state.write() = KillSwitchState::Liquidating;
 
-        let config = self.config.read();
-        let strategy = &config.liquidation_strategy;
+        let strategy = &self.config.read().liquidation_strategy;
 
         let mut orders: Vec<LiquidationOrder> = positions
             .into_iter()
             .enumerate()
             .map(|(i, pos)| {
                 let target_price = match strategy.order_type {
-                    LiquidationOrderType::Market => None,
                     LiquidationOrderType::LimitWithSlippage => {
                         let slippage_factor = if pos.quantity > Decimal::ZERO {
                             Decimal::ONE - strategy.max_slippage
@@ -481,14 +485,14 @@ impl KillSwitch {
                         };
                         Some(pos.current_price * slippage_factor)
                     }
-                    LiquidationOrderType::Twap => None,
+                    LiquidationOrderType::Market | LiquidationOrderType::Twap => None,
                 };
 
                 LiquidationOrder {
                     symbol: pos.symbol,
                     quantity: -pos.quantity, // Reverse the position
                     target_price,
-                    priority: i as u32,
+                    priority: u32::try_from(i).unwrap_or(u32::MAX),
                     status: LiquidationStatus::Pending,
                     created_at: Timestamp::now(),
                     completed_at: None,
@@ -586,7 +590,7 @@ fn generate_id() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    format!("ks-{:016x}", timestamp)
+    format!("ks-{timestamp:016x}")
 }
 
 #[cfg(test)]
@@ -625,9 +629,11 @@ mod tests {
 
     #[test]
     fn test_kill_switch_deactivate() {
-        let mut config = KillSwitchConfig::default();
-        config.require_manual_deactivation = false;
-        config.cooldown_secs = 0;
+        let config = KillSwitchConfig {
+            require_manual_deactivation: false,
+            cooldown_secs: 0,
+            ..Default::default()
+        };
         let ks = KillSwitch::new(config);
 
         ks.activate("Test");

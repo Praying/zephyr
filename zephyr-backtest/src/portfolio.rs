@@ -269,16 +269,15 @@ impl PortfolioBacktester {
     pub fn update_price(&mut self, symbol: &Symbol, price: Price, timestamp: Timestamp) {
         // Calculate return for correlation
         if self.config.calculate_correlations {
-            if let Some(prev_price) = self.prev_prices.get(symbol) {
-                if !prev_price.is_zero() {
-                    let ret =
-                        (price.as_decimal() - prev_price.as_decimal()) / prev_price.as_decimal();
-                    if let Some(returns) = self.return_history.get_mut(symbol) {
-                        returns.push(ret);
-                        // Keep only lookback period
-                        if returns.len() > self.config.correlation_lookback {
-                            returns.remove(0);
-                        }
+            if let Some(prev_price) = self.prev_prices.get(symbol)
+                && !prev_price.is_zero()
+            {
+                let ret = (price.as_decimal() - prev_price.as_decimal()) / prev_price.as_decimal();
+                if let Some(returns) = self.return_history.get_mut(symbol) {
+                    returns.push(ret);
+                    // Keep only lookback period
+                    if returns.len() > self.config.correlation_lookback {
+                        returns.remove(0);
                     }
                 }
             }
@@ -410,10 +409,9 @@ impl PortfolioBacktester {
 
                 if let (Some(returns1), Some(returns2)) =
                     (self.return_history.get(sym1), self.return_history.get(sym2))
+                    && let Some(corr) = calculate_correlation(returns1, returns2)
                 {
-                    if let Some(corr) = calculate_correlation(returns1, returns2) {
-                        matrix.set(sym1, sym2, corr);
-                    }
+                    matrix.set(sym1, sym2, corr);
                 }
             }
         }

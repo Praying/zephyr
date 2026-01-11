@@ -1,6 +1,6 @@
 //! # Zephyr Core
 //!
-//! Core types, traits, and interfaces for the Zephyr cryptocurrency trading system.
+//! Core types, traits, and interfaces for Zephyr cryptocurrency trading system.
 //!
 //! This crate provides:
 //! - `NewType` wrappers for financial primitives (Price, Quantity, Amount, etc.)
@@ -18,7 +18,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_const_for_fn)]
 
-/// Core type definitions and `NewType` wrappers
+/// Core type definitions and 'NewType' wrappers
 pub mod types;
 
 /// Market data structures

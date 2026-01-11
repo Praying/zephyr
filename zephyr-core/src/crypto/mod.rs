@@ -7,9 +7,9 @@
 //!
 //! # Modules
 //!
-//! - [`funding`] - Funding rate calculations and position cost adjustments
-//! - [`margin`] - Margin, liquidation, and unrealized PnL calculations
-//! - [`contract`] - Contract information management and symbol normalization
+//! - funding - Funding rate calculations and position cost adjustments
+//! - margin - Margin, liquidation, and unrealized PnL calculations
+//! - contract - Contract information management and symbol normalization
 
 pub mod contract;
 pub mod funding;

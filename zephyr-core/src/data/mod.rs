@@ -5,14 +5,14 @@
 //!
 //! # Structures
 //!
-//! - [`TickData`] - Real-time tick/trade data
-//! - [`KlineData`] - Candlestick/OHLCV data
-//! - [`OrderBook`] - Order book with bid/ask levels
-//! - [`KlinePeriod`] - K-line time periods
-//! - [`Order`] - Order with current state
-//! - [`OrderRequest`] - Request to create a new order
-//! - [`Position`] - Trading position
-//! - [`Account`] - Trading account
+//! - TickData - Real-time tick/trade data
+//! - KlineData - Candlestick/OHLCV data
+//! - OrderBook - Order book with bid/ask levels
+//! - KlinePeriod - K-line time periods
+//! - Order - Order with current state
+//! - OrderRequest - Request to create a new order
+//! - Position - Trading position
+//! - Account - Trading account
 
 mod kline;
 mod order;

@@ -18,11 +18,12 @@
 //! CpuAffinity::set_current_thread(&[0]).unwrap();
 //!
 //! // Bind to multiple cores
+//! CpuAffinity::set_current_thread(&[2, 3]).unwrap();
+//! ```
 
 #![allow(clippy::uninlined_format_args)]
 #![allow(clippy::redundant_closure_for_method_calls)]
-//! CpuAffinity::set_current_thread(&[2, 3]).unwrap();
-//! ```
+#![allow(unsafe_code)]
 
 use std::fmt;
 
@@ -103,7 +104,7 @@ impl CpuAffinity {
             libc::sched_setaffinity(
                 0, // current thread
                 mem::size_of::<libc::cpu_set_t>(),
-                &cpu_set,
+                &raw const cpu_set,
             )
         };
 

@@ -1,8 +1,8 @@
 //! Hyperliquid DEX adapter.
 //!
 //! This module provides adapters for Hyperliquid decentralized exchange:
-//! - [`HyperliquidParser`] - Market data parser for WebSocket streams
-//! - [`HyperliquidTrader`] - Trading gateway for REST/WebSocket API
+//! - HyperliquidParser - Market data parser for WebSocket streams
+//! - HyperliquidTrader - Trading gateway for REST/WebSocket API
 //!
 //! # DEX-Specific Features
 //!

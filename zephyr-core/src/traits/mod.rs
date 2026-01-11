@@ -5,9 +5,9 @@
 //!
 //! # Modules
 //!
-//! - [`parser`] - Market data parser traits and configuration
-//! - [`trader`] - Trading gateway traits and order types
-//! - [`strategy`] - Strategy traits for CTA and HFT strategies
+//! - parser - Market data parser traits and configuration
+//! - trader - Trading gateway traits and order types
+//! - strategy - Strategy traits for CTA and HFT strategies
 //!
 //! # Quick Start
 //!

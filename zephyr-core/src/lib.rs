@@ -3,8 +3,8 @@
 //! Core types, traits, and interfaces for Zephyr cryptocurrency trading system.
 //!
 //! This crate provides:
-//! - 'NewType' wrappers for financial primitives (Price, Quantity, Amount, etc.)
-//! - Core data structures (TickData, KlineData, OrderBook)
+//! - `NewType` wrappers for financial primitives (Price, Quantity, Amount, etc.)
+//! - Core data structures (`TickData`, `KlineData`, `OrderBook`)
 //! - Error types and handling framework
 //! - Trait definitions for parsers, traders, and strategies
 //! - Cryptocurrency-specific features (funding rates, margin calculations, contract management)

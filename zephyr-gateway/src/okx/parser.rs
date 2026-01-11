@@ -699,7 +699,7 @@ mod tests {
             low24h: "40000.00".to_string(),
             vol_ccy24h: "1000000.00".to_string(),
             vol24h: "25.5".to_string(),
-            ts: "1672515782136".to_string(),
+            ts: "1_672_515_782_136".to_string(),
             sod_utc0: None,
             sod_utc8: None,
         };
@@ -714,11 +714,11 @@ mod tests {
         let parser = OkxParser::new();
         let trade = OkxTrade {
             inst_id: "BTC-USDT".to_string(),
-            trade_id: "123456789".to_string(),
+            trade_id: "123_456_789".to_string(),
             px: "42000.00".to_string(),
             sz: "0.001".to_string(),
             side: "buy".to_string(),
-            ts: "1672515782136".to_string(),
+            ts: "1_672_515_782_136".to_string(),
         };
 
         let tick = parser.parse_trade(&trade).unwrap();
@@ -756,7 +756,7 @@ mod tests {
             inst_type: "SWAP".to_string(),
             inst_id: "BTC-USDT-SWAP".to_string(),
             mark_px: "42000.00".to_string(),
-            ts: "1672515782136".to_string(),
+            ts: "1_672_515_782_136".to_string(),
         };
 
         let tick = parser.parse_mark_price(&mark).unwrap();

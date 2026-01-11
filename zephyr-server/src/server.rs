@@ -2,10 +2,17 @@
 //!
 //! Provides the core server that orchestrates all Zephyr components.
 
+#![allow(
+    clippy::unused_self,
+    clippy::significant_drop_tightening,
+    clippy::used_underscore_binding,
+    clippy::unnecessary_map_or
+)]
+
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 use tracing_appender::non_blocking::WorkerGuard;
 
 use zephyr_api::{ApiConfig, ApiServer, AppState};
@@ -125,7 +132,7 @@ impl ZephyrServer {
         self.init_logging()?;
 
         // Initialize metrics
-        self.init_metrics()?;
+        self.init_metrics();
 
         // Load plugins
         self.load_plugins().await?;
@@ -151,7 +158,7 @@ impl ZephyrServer {
     }
 
     /// Initializes the metrics system.
-    fn init_metrics(&self) -> Result<(), ServerError> {
+    fn init_metrics(&self) {
         let metrics_config = MetricsConfig::default();
 
         // Metrics initialization may fail if already initialized (e.g., in tests)
@@ -160,8 +167,6 @@ impl ZephyrServer {
         } else {
             info!("Metrics initialized");
         }
-
-        Ok(())
     }
 
     /// Loads plugins from configured directories.
@@ -263,17 +268,13 @@ impl ZephyrServer {
         // Cancel pending orders if configured
         if self.config.shutdown.cancel_pending_orders {
             info!("Cancelling pending orders...");
-            if let Err(e) = self.cancel_pending_orders().await {
-                error!("Error cancelling pending orders: {}", e);
-            }
+            self.cancel_pending_orders();
         }
 
         // Save state if configured
         if self.config.shutdown.save_state {
             info!("Saving state...");
-            if let Err(e) = self.save_state().await {
-                error!("Error saving state: {}", e);
-            }
+            self.save_state();
         }
 
         // Unload plugins
@@ -294,24 +295,22 @@ impl ZephyrServer {
     }
 
     /// Cancels all pending orders.
-    async fn cancel_pending_orders(&self) -> Result<(), ServerError> {
+    fn cancel_pending_orders(&self) {
         // In a full implementation, this would iterate through all active
         // trading gateways and cancel pending orders
         let timeout = self.config.shutdown.cancel_timeout();
         info!("Order cancellation timeout: {:?}", timeout);
 
         // Placeholder - actual implementation would cancel orders
-        Ok(())
     }
 
     /// Saves server state for recovery.
-    async fn save_state(&self) -> Result<(), ServerError> {
+    fn save_state(&self) {
         // In a full implementation, this would save:
         // - Strategy states
         // - Position information
         // - Pending order information
         info!("State saved successfully");
-        Ok(())
     }
 
     /// Initiates server shutdown.

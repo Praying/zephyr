@@ -393,7 +393,7 @@ mod tests {
     fn test_contextual_error_new() {
         let error = ZephyrError::Network(NetworkError::Timeout { timeout_ms: 5000 });
         let context = ErrorContext::new("BinanceGateway", "connect");
-        let contextual = ContextualError::new(error.clone(), context);
+        let contextual = ContextualError::new(error, context);
 
         assert_eq!(contextual.error_type(), "NetworkError");
         assert_eq!(contextual.context().component(), "BinanceGateway");

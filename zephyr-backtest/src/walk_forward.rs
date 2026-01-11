@@ -318,10 +318,10 @@ impl WalkForwardOptimizer {
         let aggregate_out_of_sample = self.calculate_aggregate(&window_results, false);
 
         // Overall efficiency ratio
-        let overall_efficiency = if !aggregate_in_sample.mean_return.is_zero() {
-            aggregate_out_of_sample.mean_return / aggregate_in_sample.mean_return
-        } else {
+        let overall_efficiency = if aggregate_in_sample.mean_return.is_zero() {
             Decimal::ZERO
+        } else {
+            aggregate_out_of_sample.mean_return / aggregate_in_sample.mean_return
         };
 
         // Walk-forward efficiency (% of windows with positive OOS return)
@@ -448,10 +448,10 @@ impl WalkForwardOptimizer {
         let std = decimal_sqrt(variance).unwrap_or(Decimal::ZERO);
 
         // Coefficient of variation (lower is more stable)
-        let cv = if !mean.is_zero() {
-            (std / mean.abs()).min(dec!(2))
-        } else {
+        let cv = if mean.is_zero() {
             dec!(2)
+        } else {
+            (std / mean.abs()).min(dec!(2))
         };
 
         // Convert to 0-1 score (1 = most stable)

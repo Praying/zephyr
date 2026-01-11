@@ -4,6 +4,8 @@
 //! must implement, as well as the context trait for market data access
 //! and order submission.
 
+#![allow(clippy::return_self_not_must_use)]
+
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

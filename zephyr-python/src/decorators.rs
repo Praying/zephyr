@@ -81,7 +81,7 @@ impl PyStrategyMeta {
 
 /// Internal decorator state for CTA strategies.
 #[pyclass(name = "_CtaDecorator", module = "zephyr_py")]
-struct CtaDecorator {
+pub struct CtaDecorator {
     name: String,
     symbols: Vec<String>,
     params: HashMap<String, PyObject>,
@@ -140,7 +140,7 @@ impl CtaDecorator {
 
 /// Internal decorator state for HFT strategies.
 #[pyclass(name = "_HftDecorator", module = "zephyr_py")]
-struct HftDecorator {
+pub struct HftDecorator {
     name: String,
     symbols: Vec<String>,
     params: HashMap<String, PyObject>,
@@ -262,6 +262,7 @@ pub fn hft_strategy(
 /// print(meta.name)  # "test"
 /// ```
 #[pyfunction]
+#[allow(clippy::unnecessary_wraps)]
 pub fn get_strategy_meta(cls: &Bound<'_, PyAny>) -> PyResult<Option<PyObject>> {
     match cls.getattr("_zephyr_meta") {
         Ok(meta) => Ok(Some(meta.unbind())),

@@ -89,8 +89,9 @@ where
             .headers()
             .get(&REQUEST_ID_HEADER)
             .and_then(|h| h.to_str().ok())
-            .map(|s| RequestId::from_string(s.to_string()))
-            .unwrap_or_else(RequestId::generate);
+            .map_or_else(RequestId::generate, |s| {
+                RequestId::from_string(s.to_string())
+            });
 
         // Store in extensions
         request.extensions_mut().insert(request_id.clone());

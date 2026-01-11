@@ -147,6 +147,7 @@ struct VolumeProfile {
     /// Volume weights per bucket (normalized to sum to 1.0).
     weights: Vec<Decimal>,
     /// Total observed volume.
+    #[allow(dead_code)]
     total_volume: Decimal,
 }
 
@@ -157,14 +158,6 @@ impl VolumeProfile {
         Self {
             weights: vec![weight; buckets as usize],
             total_volume: Decimal::ZERO,
-        }
-    }
-
-    /// Updates the profile with observed volume.
-    fn observe_volume(&mut self, bucket_idx: usize, volume: Decimal) {
-        if bucket_idx < self.weights.len() {
-            self.total_volume += volume;
-            // In a real implementation, we'd update weights based on observed patterns
         }
     }
 

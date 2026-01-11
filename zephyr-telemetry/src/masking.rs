@@ -230,49 +230,49 @@ mod tests {
         let masker = SensitiveDataMasker::new();
 
         // Long value
-        let masked = masker.mask_value("abcdefghijklmnop");
-        assert_eq!(masked, "abc***nop");
+        let result = masker.mask_value("abcdefghijklmnop");
+        assert_eq!(result, "abc***nop");
 
         // Short value
-        let masked = masker.mask_value("short");
-        assert_eq!(masked, "*****");
+        let result = masker.mask_value("short");
+        assert_eq!(result, "*****");
     }
 
     #[test]
     fn test_mask_api_key() {
         let masker = SensitiveDataMasker::new();
         let input = r#"{"api_key": "abcdefghijklmnop1234567890123456"}"#;
-        let masked = masker.mask_string(input);
+        let result = masker.mask_string(input);
 
-        assert!(masked.contains("***"));
-        assert!(!masked.contains("abcdefghijklmnop1234567890123456"));
+        assert!(result.contains("***"));
+        assert!(!result.contains("abcdefghijklmnop1234567890123456"));
     }
 
     #[test]
     fn test_mask_secret_key() {
         let masker = SensitiveDataMasker::new();
         let input = r#"secret_key = "mysupersecretkey1234567890123456""#;
-        let masked = masker.mask_string(input);
+        let result = masker.mask_string(input);
 
-        assert!(masked.contains("***"));
+        assert!(result.contains("***"));
     }
 
     #[test]
     fn test_mask_bearer_token() {
         let masker = SensitiveDataMasker::new();
         let input = "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
-        let masked = masker.mask_string(input);
+        let result = masker.mask_string(input);
 
-        assert!(masked.contains("***"));
+        assert!(result.contains("***"));
     }
 
     #[test]
     fn test_no_sensitive_data() {
         let masker = SensitiveDataMasker::new();
         let input = "This is a normal log message without secrets";
-        let masked = masker.mask_string(input);
+        let result = masker.mask_string(input);
 
-        assert_eq!(masked, input);
+        assert_eq!(result, input);
     }
 
     #[test]

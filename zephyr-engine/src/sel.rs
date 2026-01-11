@@ -9,6 +9,7 @@
 #![allow(clippy::map_unwrap_or)]
 #![allow(clippy::explicit_iter_loop)]
 #![allow(clippy::doc_markdown)]
+#![allow(clippy::redundant_clone)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -722,7 +723,7 @@ mod tests {
         let aggregator = create_test_aggregator();
         let ctx = SelStrategyContextImpl::new("test", aggregator);
 
-        let ts = Timestamp::new(1704067200000).unwrap();
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
         ctx.set_current_time(ts);
         assert_eq!(ctx.current_time(), ts);
     }

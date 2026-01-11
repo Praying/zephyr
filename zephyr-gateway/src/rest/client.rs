@@ -1,5 +1,11 @@
 //! REST client implementation with rate limiting and request signing.
 
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::if_same_then_else)]
+#![allow(clippy::unwrap_or_default)]
+
 use reqwest::{Client, Method, Response, header};
 use serde::de::DeserializeOwned;
 use std::sync::Arc;

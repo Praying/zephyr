@@ -499,7 +499,7 @@ mod tests {
             .create_tenant(create_test_config("Acme Corp", "acme"))
             .await
             .unwrap();
-        let tenant2 = manager
+        let _tenant2 = manager
             .create_tenant(create_test_config("Beta Corp", "beta"))
             .await
             .unwrap();

@@ -295,8 +295,10 @@ mod tests {
 
     #[test]
     fn test_subdomain_with_base_domain() {
-        let mut config = TenantIdentifierConfig::default();
-        config.base_domain = Some("example.com".to_string());
+        let config = TenantIdentifierConfig {
+            base_domain: Some("example.com".to_string()),
+            ..Default::default()
+        };
         let extractor = TenantIdentifierExtractor::new(config);
 
         let id = extractor.from_subdomain("acme.example.com").unwrap();
@@ -342,8 +344,10 @@ mod tests {
 
     #[test]
     fn test_path_prefix_extraction() {
-        let mut config = TenantIdentifierConfig::default();
-        config.enable_path_prefix = true;
+        let config = TenantIdentifierConfig {
+            enable_path_prefix: true,
+            ..Default::default()
+        };
         let extractor = TenantIdentifierExtractor::new(config);
 
         let id = extractor.from_path_prefix("/tenants/acme/orders").unwrap();
@@ -352,8 +356,10 @@ mod tests {
 
     #[test]
     fn test_disabled_method_fails() {
-        let mut config = TenantIdentifierConfig::default();
-        config.enable_subdomain = false;
+        let config = TenantIdentifierConfig {
+            enable_subdomain: false,
+            ..Default::default()
+        };
         let extractor = TenantIdentifierExtractor::new(config);
 
         assert!(extractor.from_subdomain("acme.example.com").is_err());

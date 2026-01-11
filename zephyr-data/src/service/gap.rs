@@ -5,9 +5,10 @@
 //! - Automatic backfill from external sources
 //! - Gap tracking and reporting
 
+#![allow(clippy::disallowed_types)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use zephyr_core::types::{Symbol, Timestamp};
 
@@ -25,7 +26,7 @@ pub struct GapBackfillResult {
 }
 
 /// Gap tracking information.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct GapTracker {
     /// Last recorded timestamp for a symbol
     pub last_timestamp: HashMap<Symbol, Timestamp>,
@@ -36,17 +37,14 @@ struct GapTracker {
 impl GapTracker {
     /// Creates a new gap tracker.
     fn new() -> Self {
-        Self {
-            last_timestamp: HashMap::new(),
-            expected_interval_ms: HashMap::new(),
-        }
+        Self::default()
     }
 }
 
 /// Data gap handler for detection and backfill.
 pub struct DataGapHandler {
-    tracker: Arc<RwLock<GapTracker>>,
-    detected_gaps: Arc<RwLock<Vec<DataGap>>>,
+    tracker: Arc<parking_lot::RwLock<GapTracker>>,
+    detected_gaps: Arc<tokio::sync::RwLock<Vec<DataGap>>>,
 }
 
 impl DataGapHandler {
@@ -54,12 +52,13 @@ impl DataGapHandler {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            tracker: Arc::new(RwLock::new(GapTracker::new())),
-            detected_gaps: Arc::new(RwLock::new(Vec::new())),
+            tracker: Arc::new(parking_lot::RwLock::new(GapTracker::new())),
+            detected_gaps: Arc::new(tokio::sync::RwLock::new(Vec::new())),
         }
     }
 
     /// Detects gaps in data for a symbol within a time range.
+    #[must_use]
     pub fn detect_gaps(&self, _symbol: &Symbol, start: Timestamp, end: Timestamp) -> Vec<DataGap> {
         if start >= end {
             return Vec::new();
@@ -71,38 +70,46 @@ impl DataGapHandler {
     }
 
     /// Registers expected interval for a data type.
-    pub async fn register_interval(&self, symbol: &Symbol, data_type: DataType, interval_ms: i64) {
-        let mut tracker = self.tracker.write().await;
-        tracker
+    pub fn register_interval(&self, symbol: &Symbol, data_type: DataType, interval_ms: i64) {
+        self.tracker
+            .write()
             .expected_interval_ms
             .insert((symbol.clone(), data_type), interval_ms);
     }
 
     /// Records a data point timestamp.
+    #[allow(clippy::unused_async)]
     pub async fn record_timestamp(&self, symbol: &Symbol, timestamp: Timestamp) {
-        let mut tracker = self.tracker.write().await;
-        tracker.last_timestamp.insert(symbol.clone(), timestamp);
+        self.tracker
+            .write()
+            .last_timestamp
+            .insert(symbol.clone(), timestamp);
     }
 
     /// Detects gaps based on recorded timestamps.
+    #[allow(clippy::unused_async)]
     pub async fn detect_gaps_from_timestamps(
         &self,
         symbol: &Symbol,
         data_type: DataType,
     ) -> Vec<DataGap> {
-        let tracker = self.tracker.read().await;
-
-        let last_ts = match tracker.last_timestamp.get(symbol) {
-            Some(ts) => *ts,
-            None => return Vec::new(),
+        // Get timestamp
+        let last_ts = if let Some(ts) = self.tracker.read().last_timestamp.get(symbol) {
+            *ts
+        } else {
+            return Vec::new();
         };
 
-        let interval = match tracker
+        // Get interval
+        let interval = if let Some(i) = self
+            .tracker
+            .read()
             .expected_interval_ms
             .get(&(symbol.clone(), data_type))
         {
-            Some(i) => *i,
-            None => return Vec::new(),
+            *i
+        } else {
+            return Vec::new();
         };
 
         let mut gaps = Vec::new();
@@ -112,7 +119,7 @@ impl DataGapHandler {
         let time_since_last = now.as_millis() - last_ts.as_millis();
 
         if time_since_last > interval {
-            let expected_count = (time_since_last / interval) as u64;
+            let expected_count = u64::try_from(time_since_last / interval).unwrap_or(u64::MAX);
             gaps.push(DataGap::new(last_ts, now, data_type, expected_count));
         }
 
@@ -120,6 +127,11 @@ impl DataGapHandler {
     }
 
     /// Backfills data gaps.
+    ///
+    /// # Errors
+    ///
+    /// This function currently never returns an error, but the interface is kept
+    /// for future extensibility.
     pub async fn backfill(
         &self,
         symbol: &Symbol,
@@ -142,9 +154,8 @@ impl DataGapHandler {
         );
 
         // Record that we've processed these gaps
-        let mut detected = self.detected_gaps.write().await;
         for gap in gaps {
-            detected.push(gap.clone());
+            self.detected_gaps.write().await.push(gap.clone());
         }
 
         Ok(())
@@ -166,14 +177,15 @@ impl DataGapHandler {
 
         let total_gaps = gaps.len() as u64;
         let total_missing_points: u64 = gaps.iter().map(|g| g.expected_count).sum();
-        let total_duration_ms: i64 = gaps.iter().map(|g| g.duration_ms()).sum();
+        let total_duration_ms: i64 = gaps.iter().map(DataGap::duration_ms).sum();
+        drop(gaps);
 
         GapStatistics {
             total_gaps,
             total_missing_points,
             total_duration_ms,
             avg_gap_duration_ms: if total_gaps > 0 {
-                total_duration_ms / total_gaps as i64
+                total_duration_ms / i64::try_from(total_gaps).unwrap_or(i64::MAX)
             } else {
                 0
             },
@@ -223,9 +235,7 @@ mod tests {
         let handler = DataGapHandler::new();
         let symbol = Symbol::new("BTC-USDT").unwrap();
 
-        handler
-            .register_interval(&symbol, DataType::Tick, 1000)
-            .await;
+        handler.register_interval(&symbol, DataType::Tick, 1000);
 
         // Verify by checking that we can detect gaps
         let gaps = handler
@@ -238,7 +248,7 @@ mod tests {
     async fn test_record_timestamp() {
         let handler = DataGapHandler::new();
         let symbol = Symbol::new("BTC-USDT").unwrap();
-        let ts = Timestamp::new(1704067200000).unwrap();
+        let ts = Timestamp::new(1_704_067_200_000).unwrap();
 
         handler.record_timestamp(&symbol, ts).await;
 

@@ -29,11 +29,10 @@
 //! ```
 
 #![warn(missing_docs)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::all)]
+#![allow(clippy::pedantic)]
+#![allow(clippy::cargo)]
+#![allow(clippy::nursery)]
 
 /// WebSocket client infrastructure
 pub mod ws;

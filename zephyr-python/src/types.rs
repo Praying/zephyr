@@ -379,7 +379,7 @@ impl PySymbol {
 ///
 /// ```python
 /// ts = Timestamp.now()
-/// ts = Timestamp(1704067200000)
+/// ts = Timestamp(1_704_067_200_000)
 /// print(ts.as_secs)  # Seconds since epoch
 /// dt = ts.to_datetime()  # Convert to datetime
 /// ```

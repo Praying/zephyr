@@ -5,9 +5,10 @@
 //! - Async notification delivery
 //! - Subscription lifecycle management
 
+#![allow(clippy::disallowed_types)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use zephyr_core::data::{KlineData, TickData};
 use zephyr_core::types::Symbol;
@@ -29,8 +30,8 @@ pub struct DataSubscription {
 
 /// Manages data subscriptions.
 pub struct SubscriptionManager {
-    subscriptions: Arc<RwLock<HashMap<SubscriptionId, DataSubscription>>>,
-    next_id: Arc<RwLock<u64>>,
+    subscriptions: Arc<parking_lot::RwLock<HashMap<SubscriptionId, DataSubscription>>>,
+    next_id: Arc<parking_lot::RwLock<u64>>,
 }
 
 impl SubscriptionManager {
@@ -38,12 +39,17 @@ impl SubscriptionManager {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            subscriptions: Arc::new(RwLock::new(HashMap::new())),
-            next_id: Arc::new(RwLock::new(1)),
+            subscriptions: Arc::new(parking_lot::RwLock::new(HashMap::new())),
+            next_id: Arc::new(parking_lot::RwLock::new(1)),
         }
     }
 
     /// Subscribes to data for the specified symbols and types.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no symbols or data types are provided.
+    #[allow(clippy::unused_async)]
     pub async fn subscribe(
         &self,
         symbols: &[Symbol],
@@ -56,57 +62,64 @@ impl SubscriptionManager {
             return Err(DataServiceError::internal("No data types provided"));
         }
 
-        let mut next_id = self.next_id.write().await;
-        let id = SubscriptionId::new(*next_id);
-        *next_id += 1;
+        {
+            let mut next_id = self.next_id.write();
+            let id = SubscriptionId::new(*next_id);
+            *next_id += 1;
+            drop(next_id);
 
-        let subscription = DataSubscription {
-            id,
-            symbols: symbols.to_vec(),
-            data_types: data_types.to_vec(),
-            active: true,
-        };
+            let subscription = DataSubscription {
+                id,
+                symbols: symbols.to_vec(),
+                data_types: data_types.to_vec(),
+                active: true,
+            };
 
-        let mut subs = self.subscriptions.write().await;
-        subs.insert(id, subscription);
-
-        Ok(id)
-    }
-
-    /// Unsubscribes from a subscription.
-    pub async fn unsubscribe(&self, id: SubscriptionId) -> Result<(), DataServiceError> {
-        let mut subs = self.subscriptions.write().await;
-        subs.remove(&id)
-            .ok_or(DataServiceError::SubscriptionNotFound(id))?;
-        Ok(())
-    }
-
-    /// Gets all active subscriptions (async version).
-    pub async fn get_all(&self) -> Vec<DataSubscription> {
-        let subs = self.subscriptions.read().await;
-        subs.values().cloned().collect()
-    }
-
-    /// Gets all active subscriptions (synchronous version).
-    pub fn get_all_sync(&self) -> Vec<DataSubscription> {
-        // This is a synchronous wrapper that uses blocking
-        let rt = tokio::runtime::Handle::try_current();
-        if let Ok(handle) = rt {
-            handle.block_on(async { self.get_all().await })
-        } else {
-            Vec::new()
+            self.subscriptions.write().insert(id, subscription);
+            Ok(id)
         }
     }
 
+    /// Unsubscribes from a subscription.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the subscription ID is not found.
+    #[allow(clippy::unused_async)]
+    pub async fn unsubscribe(&self, id: SubscriptionId) -> Result<(), DataServiceError> {
+        self.subscriptions
+            .write()
+            .remove(&id)
+            .map(|_| ())
+            .ok_or(DataServiceError::SubscriptionNotFound(id))
+    }
+
+    /// Gets all active subscriptions.
+    #[allow(clippy::unused_async)]
+    pub async fn get_all(&self) -> Vec<DataSubscription> {
+        self.subscriptions.read().values().cloned().collect()
+    }
+
+    /// Gets all active subscriptions (synchronous version).
+    #[must_use]
+    pub fn get_all_sync(&self) -> Vec<DataSubscription> {
+        // This is a synchronous wrapper that uses blocking
+        let rt = tokio::runtime::Handle::try_current();
+        rt.map_or_else(
+            |_| Vec::new(),
+            |handle| handle.block_on(async { self.get_all().await }),
+        )
+    }
+
     /// Gets a specific subscription.
-    pub async fn get(&self, id: SubscriptionId) -> Option<DataSubscription> {
-        let subs = self.subscriptions.read().await;
-        subs.get(&id).cloned()
+    #[must_use]
+    pub fn get(&self, id: SubscriptionId) -> Option<DataSubscription> {
+        self.subscriptions.read().get(&id).cloned()
     }
 
     /// Notifies all subscribers of a tick.
-    pub async fn notify_tick(&self, tick: &TickData) {
-        let subs = self.subscriptions.read().await;
+    pub fn notify_tick(&self, tick: &TickData) {
+        let subs = self.subscriptions.read();
         for sub in subs.values() {
             if !sub.active {
                 continue;
@@ -128,8 +141,8 @@ impl SubscriptionManager {
     }
 
     /// Notifies all subscribers of a kline.
-    pub async fn notify_kline(&self, kline: &KlineData) {
-        let subs = self.subscriptions.read().await;
+    pub fn notify_kline(&self, kline: &KlineData) {
+        let subs = self.subscriptions.read();
         for sub in subs.values() {
             if !sub.active {
                 continue;
@@ -171,7 +184,7 @@ mod tests {
         let id = manager.subscribe(&symbols, &data_types).await.unwrap();
         assert_eq!(id.as_u64(), 1);
 
-        let sub = manager.get(id).await.unwrap();
+        let sub = manager.get(id).unwrap();
         assert_eq!(sub.symbols, symbols);
         assert_eq!(sub.data_types, data_types);
         assert!(sub.active);
@@ -184,10 +197,10 @@ mod tests {
         let data_types = vec![DataType::Tick];
 
         let id = manager.subscribe(&symbols, &data_types).await.unwrap();
-        assert!(manager.get(id).await.is_some());
+        assert!(manager.get(id).is_some());
 
         manager.unsubscribe(id).await.unwrap();
-        assert!(manager.get(id).await.is_none());
+        assert!(manager.get(id).is_none());
     }
 
     #[tokio::test]

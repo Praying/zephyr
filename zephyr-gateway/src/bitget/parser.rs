@@ -2,6 +2,10 @@
 //!
 //! Implements the [`MarketDataParser`] trait for Bitget WebSocket streams.
 
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::wildcard_imports)]
+#![allow(clippy::unnecessary_literal_bound)]
+
 use async_trait::async_trait;
 use parking_lot::RwLock;
 use std::collections::HashSet;
@@ -101,6 +105,7 @@ impl BitgetParser {
     }
 
     /// Converts a Bitget symbol to standard format (e.g., "BTCUSDT" -> "BTC-USDT").
+    #[allow(dead_code)]
     fn from_bitget_symbol(bitget_symbol: &str) -> Option<Symbol> {
         // Common quote currencies
         let quotes = ["USDT", "USDC", "BTC", "ETH"];
@@ -178,6 +183,7 @@ impl BitgetParser {
     }
 
     /// Parses a WebSocket message and dispatches to callback.
+    #[allow(dead_code)]
     async fn handle_message(&self, text: &str) {
         let callback = match &self.callback {
             Some(cb) => cb,
@@ -228,6 +234,7 @@ impl BitgetParser {
     }
 
     /// Handles data push messages based on channel.
+    #[allow(dead_code)]
     async fn handle_data_push(
         &self,
         channel: &str,
@@ -316,6 +323,7 @@ impl BitgetParser {
     }
 
     /// Parses ticker data to TickData.
+    #[allow(dead_code)]
     fn parse_ticker(&self, ticker: &BitgetTicker) -> Option<TickData> {
         let symbol = Self::from_bitget_symbol(&ticker.inst_id)?;
         let price = Price::new(ticker.last_pr.parse().ok()?).ok()?;
@@ -353,6 +361,7 @@ impl BitgetParser {
     }
 
     /// Parses trade data to TickData.
+    #[allow(dead_code)]
     fn parse_trade(&self, trade: &BitgetTrade) -> Option<TickData> {
         let symbol = Self::from_bitget_symbol(&trade.inst_id)?;
         let price = Price::new(trade.price.parse().ok()?).ok()?;
@@ -371,6 +380,7 @@ impl BitgetParser {
     }
 
     /// Parses candle period from channel name.
+    #[allow(dead_code)]
     fn parse_candle_period(&self, channel: &str) -> Option<KlinePeriod> {
         let period_str = channel.strip_prefix("candle")?;
         match period_str {
@@ -387,6 +397,7 @@ impl BitgetParser {
     }
 
     /// Parses candle data to KlineData.
+    #[allow(dead_code)]
     fn parse_candle(
         &self,
         candle: &BitgetCandle,
@@ -420,6 +431,7 @@ impl BitgetParser {
     }
 
     /// Parses order book data to OrderBook.
+    #[allow(dead_code)]
     fn parse_orderbook(&self, book: &BitgetOrderBook, symbol: Symbol) -> Option<OrderBook> {
         let timestamp = Timestamp::new(book.ts.parse().ok()?).ok()?;
 
@@ -460,6 +472,7 @@ impl BitgetParser {
     }
 
     /// Parses mark price to TickData.
+    #[allow(dead_code)]
     fn parse_mark_price(&self, mark: &BitgetMarkPrice) -> Option<TickData> {
         let symbol = Self::from_bitget_symbol(&mark.inst_id)?;
         let price = Price::new(mark.mark_price.parse().ok()?).ok()?;
@@ -480,6 +493,7 @@ impl BitgetParser {
     }
 
     /// Parses funding rate to TickData.
+    #[allow(dead_code)]
     fn parse_funding_rate(&self, funding: &BitgetFundingRate) -> Option<TickData> {
         let symbol = Self::from_bitget_symbol(&funding.inst_id)?;
         let funding_rate = FundingRate::new(funding.funding_rate.parse().ok()?).ok()?;
@@ -503,6 +517,7 @@ impl Default for BitgetParser {
 }
 
 /// Internal WebSocket callback handler.
+#[allow(dead_code)]
 struct BitgetWsCallback {
     parser: Arc<BitgetParser>,
 }
@@ -703,6 +718,7 @@ impl MarketDataParser for BitgetParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
 
     #[test]
     fn test_to_bitget_symbol() {
@@ -764,7 +780,7 @@ mod tests {
             low24h: None,
             base_volume: None,
             quote_volume: None,
-            ts: "1672515782136".to_string(),
+            ts: "1_672_515_782_136".to_string(),
             open_utc: None,
             change_utc24h: None,
         };
@@ -779,11 +795,11 @@ mod tests {
         let parser = BitgetParser::new();
         let trade = BitgetTrade {
             inst_id: "BTCUSDT".to_string(),
-            trade_id: "123456789".to_string(),
+            trade_id: "123_456_789".to_string(),
             price: "42000.00".to_string(),
             size: "0.001".to_string(),
             side: "buy".to_string(),
-            ts: "1672515782136".to_string(),
+            ts: "1_672_515_782_136".to_string(),
         };
 
         let tick = parser.parse_trade(&trade).unwrap();
@@ -820,7 +836,7 @@ mod tests {
         let mark = BitgetMarkPrice {
             inst_id: "BTCUSDT".to_string(),
             mark_price: "42000.00".to_string(),
-            ts: "1672515782136".to_string(),
+            ts: "1_672_515_782_136".to_string(),
         };
 
         let tick = parser.parse_mark_price(&mark).unwrap();

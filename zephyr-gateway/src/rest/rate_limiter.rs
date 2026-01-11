@@ -1,5 +1,8 @@
 //! Rate limiter for API requests.
 
+#![allow(clippy::significant_drop_in_scrutinee)]
+#![allow(clippy::unchecked_time_subtraction)]
+
 use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};

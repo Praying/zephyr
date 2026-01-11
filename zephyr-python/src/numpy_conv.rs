@@ -70,13 +70,11 @@ pub fn ticks_to_numpy<'py>(py: Python<'py>, ticks: &[TickData]) -> PyResult<Boun
         volumes.push(tick.volume.as_decimal().try_into().unwrap_or(0.0));
         bids.push(
             tick.best_bid()
-                .map(|p| p.as_decimal().try_into().unwrap_or(0.0))
-                .unwrap_or(0.0),
+                .map_or(0.0, |p| p.as_decimal().try_into().unwrap_or(0.0)),
         );
         asks.push(
             tick.best_ask()
-                .map(|p| p.as_decimal().try_into().unwrap_or(0.0))
-                .unwrap_or(0.0),
+                .map_or(0.0, |p| p.as_decimal().try_into().unwrap_or(0.0)),
         );
     }
 
@@ -122,7 +120,7 @@ mod tests {
         let close_dec = rust_decimal::Decimal::try_from(close).unwrap();
         KlineData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .period(KlinePeriod::Hour1)
             .open(Price::new(dec!(42000)).unwrap())
             .high(Price::new(dec!(42500)).unwrap())

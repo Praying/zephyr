@@ -7,6 +7,7 @@
 #![allow(clippy::significant_drop_tightening)]
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::bool_assert_comparison)]
 
 use std::sync::Arc;
 
@@ -364,7 +365,6 @@ impl Default for FilterManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::portfolio::StrategyId;
     use rust_decimal_macros::dec;
     use std::collections::HashMap;
     use zephyr_core::data::OrderSide;

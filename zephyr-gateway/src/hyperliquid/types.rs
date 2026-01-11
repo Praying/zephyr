@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 //! Hyperliquid-specific types and message formats.
 //!
 //! This module contains types for parsing Hyperliquid WebSocket and REST API responses.
@@ -72,22 +74,42 @@ pub enum HyperliquidSubParams {
     AllMids,
     /// Subscribe to L2 order book
     #[serde(rename = "l2Book")]
-    L2Book { coin: String },
+    L2Book {
+        /// Coin symbol.
+        coin: String,
+    },
     /// Subscribe to trades
     #[serde(rename = "trades")]
-    Trades { coin: String },
+    Trades {
+        /// Coin symbol.
+        coin: String,
+    },
     /// Subscribe to user events (requires authentication)
     #[serde(rename = "userEvents")]
-    UserEvents { user: String },
+    UserEvents {
+        /// User address.
+        user: String,
+    },
     /// Subscribe to user fills
     #[serde(rename = "userFills")]
-    UserFills { user: String },
+    UserFills {
+        /// User address.
+        user: String,
+    },
     /// Subscribe to user funding
     #[serde(rename = "userFundings")]
-    UserFundings { user: String },
+    UserFundings {
+        /// User address.
+        user: String,
+    },
     /// Subscribe to candles
     #[serde(rename = "candle")]
-    Candle { coin: String, interval: String },
+    Candle {
+        /// Coin symbol.
+        coin: String,
+        /// Candle interval.
+        interval: String,
+    },
 }
 
 impl HyperliquidSubscription {
@@ -127,6 +149,7 @@ pub struct HyperliquidWsResponse {
 #[derive(Debug, Clone, Deserialize)]
 pub struct HyperliquidAllMids {
     /// Map of coin to mid price
+    #[allow(clippy::disallowed_types)]
     pub mids: std::collections::HashMap<String, String>,
 }
 
@@ -220,7 +243,7 @@ pub struct HyperliquidUserFill {
     pub start_position: String,
     /// Direction
     pub dir: String,
-    /// Closed PnL
+    /// Closed `PnL`
     pub closed_pnl: String,
     /// Trade hash
     pub hash: String,
@@ -475,7 +498,7 @@ pub struct HyperliquidUserState {
     pub asset_positions: Vec<HyperliquidAssetPosition>,
     /// Cross margin summary
     pub cross_margin_summary: HyperliquidMarginSummary,
-    /// Margin summary (deprecated, use cross_margin_summary)
+    /// Margin summary (deprecated, use `cross_margin_summary`)
     pub margin_summary: Option<HyperliquidMarginSummary>,
     /// Withdrawable amount
     pub withdrawable: String,
@@ -513,7 +536,7 @@ pub struct HyperliquidPosition {
     pub return_on_equity: String,
     /// Size (positive for long, negative for short)
     pub szi: String,
-    /// Unrealized PnL
+    /// Unrealized `PnL`
     pub unrealized_pnl: String,
 }
 
@@ -591,6 +614,7 @@ pub struct HyperliquidApiError {
 }
 
 /// Helper to parse decimal from string.
+#[must_use]
 pub fn parse_decimal(s: &str) -> Option<Decimal> {
     s.parse().ok()
 }
@@ -637,7 +661,7 @@ mod tests {
             "px": "42000.0",
             "sz": "0.1",
             "hash": "0x123",
-            "time": 1672515782136,
+            "time": 1_672_515_782_136,
             "tid": 12345
         }"#;
 
@@ -669,7 +693,7 @@ mod tests {
         }"#;
 
         let candle: HyperliquidCandle = serde_json::from_str(json).unwrap();
-        assert_eq!(candle.timestamp, 1672515780000);
+        assert_eq!(candle.timestamp, 1_672_515_780_000);
         assert_eq!(candle.open, "42000.0");
         assert_eq!(candle.close, "42050.0");
     }

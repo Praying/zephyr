@@ -144,10 +144,10 @@ mod tests {
         let key = b"secret-key";
 
         let sig = AuditSignature::create(data, key).unwrap();
-        let display = format!("{}", sig);
+        let display = format!("{sig}");
 
         assert!(display.contains("HMAC-SHA256"));
-        assert!(display.contains(":"));
+        assert!(display.contains(':'));
     }
 
     #[test]

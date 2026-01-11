@@ -1,3 +1,6 @@
+#![allow(clippy::disallowed_types)]
+#![allow(clippy::too_many_lines)]
+
 //! Hyperliquid trading gateway implementation.
 //!
 //! Implements the [`TraderGateway`] trait for Hyperliquid REST/WebSocket API.
@@ -6,7 +9,6 @@
 use async_trait::async_trait;
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, info};
@@ -23,7 +25,12 @@ use zephyr_core::types::{
 
 use crate::rest::{RestClient, RestConfig};
 
-use super::types::*;
+use super::types::{
+    HyperliquidAction, HyperliquidApiError, HyperliquidAssetPosition, HyperliquidCancelRequest,
+    HyperliquidExchangeRequest, HyperliquidLimitParams, HyperliquidMarket, HyperliquidMeta,
+    HyperliquidOpenOrder, HyperliquidOrderRequest, HyperliquidOrderResponse,
+    HyperliquidOrderStatus, HyperliquidOrderTypeSpec, HyperliquidSignature, HyperliquidUserState,
+};
 
 /// Hyperliquid trading gateway.
 ///
@@ -67,9 +74,9 @@ pub struct HyperliquidTrader {
     /// Login state
     logged_in: Arc<AtomicBool>,
     /// Local order cache
-    orders: Arc<RwLock<HashMap<OrderId, Order>>>,
+    orders: Arc<RwLock<std::collections::HashMap<OrderId, Order>>>,
     /// Asset index mapping (coin -> index)
-    asset_indices: Arc<RwLock<HashMap<String, u32>>>,
+    asset_indices: Arc<RwLock<std::collections::HashMap<String, u32>>>,
     /// Nonce counter for transaction ordering
     nonce: Arc<AtomicU64>,
     /// Use testnet
@@ -101,8 +108,8 @@ impl HyperliquidTrader {
             private_key: None,
             callback: None,
             logged_in: Arc::new(AtomicBool::new(false)),
-            orders: Arc::new(RwLock::new(HashMap::new())),
-            asset_indices: Arc::new(RwLock::new(HashMap::new())),
+            orders: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            asset_indices: Arc::new(RwLock::new(std::collections::HashMap::new())),
             nonce: Arc::new(AtomicU64::new(0)),
             testnet: false,
             vault_address: None,
@@ -147,11 +154,8 @@ impl HyperliquidTrader {
     /// Converts a symbol to Hyperliquid coin format.
     fn to_hyperliquid_coin(symbol: &Symbol) -> String {
         let s = symbol.as_str();
-        if let Some(pos) = s.find('-') {
-            s[..pos].to_string()
-        } else {
-            s.to_string()
-        }
+        s.find('-')
+            .map_or_else(|| s.to_string(), |pos| s[..pos].to_string())
     }
 
     /// Converts a Hyperliquid coin to standard symbol format.
@@ -165,6 +169,7 @@ impl HyperliquidTrader {
     }
 
     /// Gets the current timestamp in milliseconds.
+    #[allow(clippy::cast_possible_truncation)]
     fn timestamp_ms() -> u64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -176,7 +181,7 @@ impl HyperliquidTrader {
     fn client(&self) -> Result<&RestClient, ExchangeError> {
         self.rest_client
             .as_ref()
-            .ok_or(ExchangeError::AuthenticationFailed {
+            .ok_or_else(|| ExchangeError::AuthenticationFailed {
                 reason: "Not logged in".to_string(),
             })
     }
@@ -185,7 +190,7 @@ impl HyperliquidTrader {
     fn wallet(&self) -> Result<&str, ExchangeError> {
         self.wallet_address
             .as_deref()
-            .ok_or(ExchangeError::AuthenticationFailed {
+            .ok_or_else(|| ExchangeError::AuthenticationFailed {
                 reason: "Not logged in".to_string(),
             })
     }
@@ -196,7 +201,7 @@ impl HyperliquidTrader {
     }
 
     /// Sets the asset index mapping.
-    pub fn set_asset_indices(&self, indices: HashMap<String, u32>) {
+    pub fn set_asset_indices(&self, indices: std::collections::HashMap<String, u32>) {
         *self.asset_indices.write() = indices;
     }
 
@@ -228,9 +233,11 @@ impl HyperliquidTrader {
             })?;
 
         // Build asset index mapping
-        let mut indices = HashMap::new();
+        let mut indices = std::collections::HashMap::new();
         for (idx, asset) in meta.universe.iter().enumerate() {
-            indices.insert(asset.name.clone(), idx as u32);
+            #[allow(clippy::cast_possible_truncation)]
+            let index = idx as u32;
+            indices.insert(asset.name.clone(), index);
         }
         self.set_asset_indices(indices);
 
@@ -267,13 +274,13 @@ impl HyperliquidTrader {
                 }
             } else {
                 ExchangeError::Unknown {
-                    code: status as i32,
+                    code: i32::from(status),
                     message: error.error,
                 }
             }
         } else {
             ExchangeError::Unknown {
-                code: status as i32,
+                code: i32::from(status),
                 message: body.to_string(),
             }
         }
@@ -291,7 +298,7 @@ impl HyperliquidTrader {
         let _private_key =
             self.private_key
                 .as_ref()
-                .ok_or(ExchangeError::AuthenticationFailed {
+                .ok_or_else(|| ExchangeError::AuthenticationFailed {
                     reason: "Private key not set".to_string(),
                 })?;
 
@@ -318,6 +325,7 @@ impl HyperliquidTrader {
     }
 
     /// Converts Hyperliquid side to standard format.
+    #[allow(dead_code)]
     fn from_hyperliquid_side(is_buy: bool) -> OrderSide {
         if is_buy {
             OrderSide::Buy
@@ -329,16 +337,14 @@ impl HyperliquidTrader {
     /// Converts time in force to Hyperliquid format.
     fn to_hyperliquid_tif(tif: TimeInForce) -> String {
         match tif {
-            TimeInForce::Gtc => "Gtc".to_string(),
-            TimeInForce::Ioc => "Ioc".to_string(),
-            TimeInForce::Fok => "Ioc".to_string(), // Hyperliquid doesn't have FOK, use IOC
+            TimeInForce::Gtc | TimeInForce::Gtd => "Gtc".to_string(), // Fallback to GTC
+            TimeInForce::Ioc | TimeInForce::Fok => "Ioc".to_string(), // Hyperliquid doesn't have FOK, use IOC
             TimeInForce::PostOnly => "Alo".to_string(),
-            TimeInForce::Gtd => "Gtc".to_string(), // Fallback to GTC
         }
     }
 
     /// Converts Hyperliquid position to standard Position.
-    fn convert_position(&self, pos: &HyperliquidAssetPosition) -> Option<Position> {
+    fn convert_position(pos: &HyperliquidAssetPosition) -> Option<Position> {
         let symbol = Self::from_hyperliquid_coin(&pos.position.coin)?;
         let szi: Decimal = pos.position.szi.parse().ok()?;
 
@@ -358,14 +364,15 @@ impl HyperliquidTrader {
 
         // Use position value to estimate mark price if not available
         let position_value: Decimal = pos.position.position_value.parse().ok()?;
-        let mark_price_dec = if !szi.is_zero() {
-            position_value / szi.abs()
-        } else {
+        let mark_price_dec = if szi.is_zero() {
             entry_price.as_decimal()
+        } else {
+            position_value / szi.abs()
         };
         let mark_price = MarkPrice::new(mark_price_dec.abs()).ok()?;
 
         let unrealized_pnl = Amount::new(pos.position.unrealized_pnl.parse().ok()?).ok()?;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let leverage = Leverage::new(pos.position.leverage.value as u8).ok()?;
 
         let liquidation_price = pos
@@ -406,7 +413,7 @@ impl HyperliquidTrader {
     }
 
     /// Converts Hyperliquid open order to standard Order.
-    fn convert_open_order(&self, order: &HyperliquidOpenOrder) -> Option<Order> {
+    fn convert_open_order(order: &HyperliquidOpenOrder) -> Option<Order> {
         let symbol = Self::from_hyperliquid_coin(&order.coin)?;
         let order_id = OrderId::new(order.oid.to_string()).ok()?;
         let price = Price::new(order.limit_px.parse().ok()?).ok()?;
@@ -534,17 +541,17 @@ impl TraderGateway for HyperliquidTrader {
         let _wallet = self.wallet()?;
 
         let coin = Self::to_hyperliquid_coin(&order.symbol);
-        let asset_index = self
-            .get_asset_index(&coin)
-            .ok_or(ExchangeError::InvalidParameter {
-                param: "symbol".to_string(),
-                reason: format!("Unknown asset: {coin}"),
-            })?;
+        let asset_index =
+            self.get_asset_index(&coin)
+                .ok_or_else(|| ExchangeError::InvalidParameter {
+                    param: "symbol".to_string(),
+                    reason: format!("Unknown asset: {coin}"),
+                })?;
 
         let price = order
             .price
             .as_ref()
-            .ok_or(ExchangeError::InvalidParameter {
+            .ok_or_else(|| ExchangeError::InvalidParameter {
                 param: "price".to_string(),
                 reason: "Price required for limit orders".to_string(),
             })?;
@@ -610,7 +617,7 @@ impl TraderGateway for HyperliquidTrader {
                                 .as_ref()
                                 .map(|r| r.oid)
                                 .or_else(|| filled.as_ref().map(|f| f.oid))
-                                .ok_or(ExchangeError::Unknown {
+                                .ok_or_else(|| ExchangeError::Unknown {
                                     code: 0,
                                     message: "No order ID in response".to_string(),
                                 })?;
@@ -694,17 +701,17 @@ impl TraderGateway for HyperliquidTrader {
             orders.get(order_id).cloned()
         };
 
-        let order = order.ok_or(ExchangeError::OrderNotFound {
+        let order = order.ok_or_else(|| ExchangeError::OrderNotFound {
             order_id: order_id.to_string(),
         })?;
 
         let coin = Self::to_hyperliquid_coin(&order.symbol);
-        let asset_index = self
-            .get_asset_index(&coin)
-            .ok_or(ExchangeError::InvalidParameter {
-                param: "symbol".to_string(),
-                reason: format!("Unknown asset: {coin}"),
-            })?;
+        let asset_index =
+            self.get_asset_index(&coin)
+                .ok_or_else(|| ExchangeError::InvalidParameter {
+                    param: "symbol".to_string(),
+                    reason: format!("Unknown asset: {coin}"),
+                })?;
 
         let oid: i64 = order_id
             .as_str()
@@ -785,10 +792,9 @@ impl TraderGateway for HyperliquidTrader {
             if matches!(
                 order.status,
                 OrderStatus::New | OrderStatus::PartiallyFilled
-            ) {
-                if self.order_cancel(&order.order_id).await.is_ok() {
-                    canceled += 1;
-                }
+            ) && self.order_cancel(&order.order_id).await.is_ok()
+            {
+                canceled += 1;
             }
         }
 
@@ -835,7 +841,7 @@ impl TraderGateway for HyperliquidTrader {
         let positions: Vec<Position> = user_state
             .asset_positions
             .iter()
-            .filter_map(|p| self.convert_position(p))
+            .filter_map(Self::convert_position)
             .collect();
 
         debug!(
@@ -879,7 +885,7 @@ impl TraderGateway for HyperliquidTrader {
 
         let mut orders: Vec<Order> = open_orders
             .iter()
-            .filter_map(|o| self.convert_open_order(o))
+            .filter_map(Self::convert_open_order)
             .collect();
 
         // Filter by symbol if specified
@@ -920,7 +926,7 @@ impl TraderGateway for HyperliquidTrader {
         orders
             .get(order_id)
             .cloned()
-            .ok_or(ExchangeError::OrderNotFound {
+            .ok_or_else(|| ExchangeError::OrderNotFound {
                 order_id: order_id.to_string(),
             })
     }
@@ -1033,7 +1039,7 @@ impl TraderGateway for HyperliquidTrader {
         self.callback = Some(Arc::from(callback));
     }
 
-    fn exchange(&self) -> &str {
+    fn exchange(&self) -> &'static str {
         "hyperliquid"
     }
 }
@@ -1041,6 +1047,7 @@ impl TraderGateway for HyperliquidTrader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_to_hyperliquid_coin() {
@@ -1076,8 +1083,8 @@ mod tests {
 
     #[test]
     fn test_trader_with_vault() {
-        let trader =
-            HyperliquidTrader::new().with_vault("0x1234567890123456789012345678901234567890");
+        let trader = HyperliquidTrader::new()
+            .with_vault("0x123_456_7890123_456_7890123_456_7890123_456_7890");
         assert!(trader.vault_address.is_some());
     }
 

@@ -115,7 +115,7 @@ impl JwtManager {
             decoding_key: DecodingKey::from_secret(config.secret.as_bytes()),
             issuer: config.issuer.clone(),
             audience: config.audience.clone(),
-            expiration_secs: config.expiration_secs as i64,
+            expiration_secs: config.expiration_secs.cast_signed(),
         }
     }
 

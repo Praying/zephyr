@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 //! REST client configuration.
 
 use serde::{Deserialize, Serialize};
@@ -59,6 +61,7 @@ pub struct RestConfig {
 
     /// Additional headers to include in requests.
     #[serde(default)]
+    #[allow(clippy::disallowed_types)]
     pub headers: std::collections::HashMap<String, String>,
 
     /// User agent string.
@@ -110,6 +113,7 @@ impl Default for RestConfig {
             max_retry_delay_ms: default_max_retry_delay_ms(),
             exchange: String::new(),
             testnet: false,
+            #[allow(clippy::disallowed_types)]
             headers: std::collections::HashMap::new(),
             user_agent: default_user_agent(),
         }
@@ -178,6 +182,7 @@ pub struct RestConfigBuilder {
     max_retry_delay_ms: Option<u64>,
     exchange: Option<String>,
     testnet: Option<bool>,
+    #[allow(clippy::disallowed_types)]
     headers: std::collections::HashMap<String, String>,
     user_agent: Option<String>,
 }

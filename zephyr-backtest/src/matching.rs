@@ -228,10 +228,10 @@ impl MatchEngine {
 
         // Update partially filled orders
         for result in &results {
-            if !result.is_complete {
-                if let Some(order) = self.pending_orders.get_mut(&result.order.order_id) {
-                    *order = result.order.clone();
-                }
+            if !result.is_complete
+                && let Some(order) = self.pending_orders.get_mut(&result.order.order_id)
+            {
+                *order = result.order.clone();
             }
         }
 
@@ -370,7 +370,7 @@ mod tests {
     fn create_tick(price: Decimal, bid: Decimal, ask: Decimal) -> TickData {
         TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new(price).unwrap())
             .volume(Quantity::new(dec!(1)).unwrap())
             .bid_price(Price::new(bid).unwrap())
@@ -469,7 +469,7 @@ mod tests {
         let tick = create_tick(dec!(100), dec!(99), dec!(101));
 
         let request = create_market_buy(dec!(1));
-        let order = engine
+        let _order = engine
             .submit_order(&request, Timestamp::new(1000).unwrap())
             .unwrap();
 

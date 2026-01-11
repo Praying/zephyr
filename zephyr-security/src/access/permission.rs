@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn test_all_permissions() {
         let all = Permission::all();
-        assert!(all.len() > 0);
+        assert!(!all.is_empty());
         assert!(all.contains(&Permission::TradeExecute));
     }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 //! Performance reporting with baseline comparison and trend analysis.
 //!
 //! This module provides:
@@ -215,6 +217,7 @@ impl PerformanceReport {
 
     /// Generate a human-readable summary.
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn to_summary(&self) -> String {
         let mut lines = Vec::new();
 
@@ -351,7 +354,7 @@ impl PerformanceReporter {
         }
 
         // Generate summary
-        report.set_summary(self.generate_summary(&report));
+        report.set_summary(Self::generate_summary(&report));
 
         // Add to history
         self.history.push(report.clone());
@@ -428,6 +431,7 @@ impl PerformanceReporter {
     }
 
     /// Compare latency values (lower is better).
+    #[allow(clippy::cast_precision_loss)]
     fn compare_latency(
         &self,
         report: &mut PerformanceReport,
@@ -487,7 +491,11 @@ impl PerformanceReporter {
             .collect();
 
         if latencies.len() >= 3 {
-            report.add_trend(self.analyze_trend("order_submission_p99", &latencies, true));
+            report.add_trend(Self::analyze_trend(
+                "order_submission_p99",
+                &latencies,
+                true,
+            ));
         }
 
         // Analyze tick processing latency trend
@@ -499,7 +507,11 @@ impl PerformanceReporter {
             .collect();
 
         if tick_latencies.len() >= 3 {
-            report.add_trend(self.analyze_trend("tick_processing_p99", &tick_latencies, true));
+            report.add_trend(Self::analyze_trend(
+                "tick_processing_p99",
+                &tick_latencies,
+                true,
+            ));
         }
 
         // Analyze order throughput trend
@@ -511,7 +523,7 @@ impl PerformanceReporter {
             .collect();
 
         if throughputs.len() >= 3 {
-            report.add_trend(self.analyze_trend(
+            report.add_trend(Self::analyze_trend(
                 "order_submission_throughput",
                 &throughputs,
                 false,
@@ -520,7 +532,7 @@ impl PerformanceReporter {
     }
 
     /// Analyze trend for a metric.
-    fn analyze_trend(&self, metric: &str, values: &[f64], lower_is_better: bool) -> TrendAnalysis {
+    fn analyze_trend(metric: &str, values: &[f64], lower_is_better: bool) -> TrendAnalysis {
         let n = values.len();
         if n < 2 {
             return TrendAnalysis {
@@ -569,7 +581,7 @@ impl PerformanceReporter {
     }
 
     /// Generate a summary for the report.
-    fn generate_summary(&self, report: &PerformanceReport) -> String {
+    fn generate_summary(report: &PerformanceReport) -> String {
         let mut parts = Vec::new();
 
         if report.has_regressions() {
@@ -607,7 +619,7 @@ impl PerformanceReporter {
     }
 }
 
-/// Simple linear regression returning (slope, r_squared).
+/// Simple linear regression returning (`slope`, `r_squared`).
 #[allow(clippy::cast_precision_loss)]
 fn linear_regression(values: &[f64]) -> (f64, f64) {
     let n = values.len() as f64;
@@ -618,20 +630,26 @@ fn linear_regression(values: &[f64]) -> (f64, f64) {
     let x_mean = (n - 1.0) / 2.0;
     let y_mean: f64 = values.iter().sum::<f64>() / n;
 
-    let mut ss_xy = 0.0;
-    let mut ss_xx = 0.0;
-    let mut ss_yy = 0.0;
+    let mut cross_prod = 0.0;
+    let mut x_sq_sum = 0.0;
+    let mut y_sq_sum = 0.0;
 
     for (i, &y) in values.iter().enumerate() {
         let x = i as f64;
-        ss_xy += (x - x_mean) * (y - y_mean);
-        ss_xx += (x - x_mean) * (x - x_mean);
-        ss_yy += (y - y_mean) * (y - y_mean);
+        cross_prod += (x - x_mean) * (y - y_mean);
+        x_sq_sum += (x - x_mean) * (x - x_mean);
+        y_sq_sum += (y - y_mean) * (y - y_mean);
     }
 
-    let slope = if ss_xx > 0.0 { ss_xy / ss_xx } else { 0.0 };
-    let r_squared = if ss_xx > 0.0 && ss_yy > 0.0 {
-        (ss_xy * ss_xy) / (ss_xx * ss_yy)
+    let slope = if x_sq_sum > 0.0 {
+        cross_prod / x_sq_sum
+    } else {
+        0.0
+    };
+    let r_squared = if x_sq_sum > 0.0 && y_sq_sum > 0.0 {
+        #[allow(clippy::suspicious_operation_groupings)]
+        let result = (cross_prod * cross_prod) / (x_sq_sum * y_sq_sum);
+        result
     } else {
         0.0
     };
@@ -679,7 +697,7 @@ mod tests {
         };
 
         assert_eq!(trend.direction, TrendDirection::Degrading);
-        assert_eq!(trend.change_percent, 15.0);
+        assert!((trend.change_percent - 15.0).abs() < 0.01);
     }
 
     #[test]

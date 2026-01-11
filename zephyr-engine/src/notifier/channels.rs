@@ -4,6 +4,7 @@
 //! events to subscribers.
 
 #![allow(clippy::disallowed_types)]
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -201,6 +202,7 @@ pub struct WebhookChannel {
     name: String,
     url: String,
     headers: HashMap<String, String>,
+    #[allow(dead_code)]
     timeout: Duration,
     max_retries: u32,
     client: reqwest::Client,
@@ -352,28 +354,19 @@ impl InMemoryChannel {
         }
     }
 
-    /// Creates an in-memory channel from configuration.
-    #[must_use]
-    pub fn from_config(config: &NotificationChannelConfig) -> Option<Self> {
-        match config {
-            NotificationChannelConfig::InMemory { buffer_size } => Some(Self::new(*buffer_size)),
-            _ => None,
-        }
-    }
-
-    /// Returns all stored events.
-    #[must_use]
-    pub fn events(&self) -> Vec<TradingEvent> {
-        self.events.read().clone()
-    }
-
-    /// Returns the number of stored events.
+    /// Returns the number of events stored in the channel.
     #[must_use]
     pub fn event_count(&self) -> usize {
         self.events.read().len()
     }
 
-    /// Clears all stored events.
+    /// Returns a copy of all events in the channel.
+    #[must_use]
+    pub fn events(&self) -> Vec<TradingEvent> {
+        self.events.read().clone()
+    }
+
+    /// Clears all events from the channel.
     pub fn clear(&self) {
         self.events.write().clear();
     }

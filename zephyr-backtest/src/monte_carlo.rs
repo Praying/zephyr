@@ -6,8 +6,6 @@
 //! - Confidence interval estimation
 //! - Robustness testing across multiple scenarios
 
-use std::collections::VecDeque;
-
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -208,10 +206,10 @@ impl MonteCarloSimulator {
 
     /// Runs a single bootstrap simulation.
     fn run_bootstrap_simulation(&mut self) -> Result<SimulationPath, MonteCarloError> {
-        if !self.trade_pnls.is_empty() {
-            self.bootstrap_trades()
-        } else {
+        if self.trade_pnls.is_empty() {
             self.bootstrap_returns()
+        } else {
+            self.bootstrap_trades()
         }
     }
 
@@ -256,10 +254,10 @@ impl MonteCarloSimulator {
             }
         }
 
-        let total_return = if !self.initial_equity.is_zero() {
-            (equity - self.initial_equity.as_decimal()) / self.initial_equity.as_decimal()
-        } else {
+        let total_return = if self.initial_equity.is_zero() {
             Decimal::ZERO
+        } else {
+            (equity - self.initial_equity.as_decimal()) / self.initial_equity.as_decimal()
         };
 
         let win_rate = if total_trades > 0 {
@@ -286,7 +284,7 @@ impl MonteCarloSimulator {
         }
 
         let block_size = self.config.block_size.min(n);
-        let num_blocks = (n + block_size - 1) / block_size;
+        let num_blocks = n.div_ceil(block_size);
 
         let mut equity = self.initial_equity.as_decimal();
         let mut peak = equity;
@@ -322,10 +320,10 @@ impl MonteCarloSimulator {
             }
         }
 
-        let total_return = if !self.initial_equity.is_zero() {
-            (equity - self.initial_equity.as_decimal()) / self.initial_equity.as_decimal()
-        } else {
+        let total_return = if self.initial_equity.is_zero() {
             Decimal::ZERO
+        } else {
+            (equity - self.initial_equity.as_decimal()) / self.initial_equity.as_decimal()
         };
 
         // Calculate Sharpe ratio from sampled returns
@@ -396,10 +394,10 @@ impl MonteCarloSimulator {
             }
         }
 
-        let total_return = if !self.initial_equity.is_zero() {
-            (equity - self.initial_equity.as_decimal()) / self.initial_equity.as_decimal()
-        } else {
+        let total_return = if self.initial_equity.is_zero() {
             Decimal::ZERO
+        } else {
+            (equity - self.initial_equity.as_decimal()) / self.initial_equity.as_decimal()
         };
 
         let sharpe = self.calculate_sharpe(&sampled_returns);
@@ -714,7 +712,7 @@ mod tests {
         let results = sim.run().unwrap();
 
         assert_eq!(results.num_simulations, 100);
-        assert!(results.var >= Decimal::ZERO || results.var < Decimal::ZERO); // VaR can be any value
+        // VaR can be any value (positive, negative, or zero)
     }
 
     #[test]

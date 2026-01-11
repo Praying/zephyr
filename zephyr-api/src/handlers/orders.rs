@@ -127,8 +127,8 @@ pub async fn list_orders(
         .iter()
         .filter(|entry| {
             let order = entry.value();
-            let symbol_match = query.symbol.as_ref().map_or(true, |s| &order.symbol == s);
-            let status_match = query.status.as_ref().map_or(true, |s| &order.status == s);
+            let symbol_match = query.symbol.as_ref().is_none_or(|s| &order.symbol == s);
+            let status_match = query.status.as_ref().is_none_or(|s| &order.status == s);
             symbol_match && status_match
         })
         .map(|entry| OrderListItem::from(entry.value()))
@@ -273,6 +273,7 @@ pub async fn cancel_order(
     }
 
     order.status = "CANCELED".to_string();
+    drop(order);
 
     Ok(EmptyResponse::success_with_message("Order canceled"))
 }

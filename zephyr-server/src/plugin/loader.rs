@@ -3,6 +3,14 @@
 //! Provides functionality to load strategy and adapter plugins
 //! from shared libraries or built-in implementations.
 
+#![allow(
+    clippy::unused_self,
+    clippy::unnecessary_wraps,
+    clippy::map_unwrap_or,
+    clippy::doc_markdown,
+    clippy::unnecessary_map_or
+)]
+
 use std::path::{Path, PathBuf};
 use tracing::{debug, error, info, warn};
 
@@ -97,13 +105,11 @@ impl PluginLoader {
 
     /// Checks if a file is a potential plugin file.
     fn is_plugin_file(path: &Path) -> bool {
-        if let Some(ext) = path.extension() {
-            let ext = ext.to_string_lossy().to_lowercase();
-            // Check for shared library extensions
-            matches!(ext.as_str(), "so" | "dylib" | "dll" | "py")
-        } else {
-            false
-        }
+        path.extension()
+            .map(|ext| ext.to_string_lossy().to_lowercase())
+            .map_or(false, |ext| {
+                matches!(ext.as_str(), "so" | "dylib" | "dll" | "py")
+            })
     }
 
     /// Loads all configured strategy plugins into the registry.

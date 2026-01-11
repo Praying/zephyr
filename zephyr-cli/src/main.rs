@@ -3,6 +3,19 @@
 //! Command-line interface for the Zephyr trading system.
 //!
 //! This CLI provides commands for:
+
+#![allow(
+    clippy::unused_self,
+    clippy::unnecessary_wraps,
+    clippy::implicit_clone,
+    clippy::clone_on_copy,
+    clippy::redundant_closure,
+    clippy::collapsible_if,
+    clippy::uninlined_format_args,
+    clippy::cast_precision_loss,
+    clippy::unnecessary_map_or,
+    clippy::unused_async
+)]
 //! - Data management (import, export, verify)
 //! - Backtesting strategies
 //! - System configuration
@@ -122,9 +135,9 @@ async fn main() -> Result<()> {
             DataCommands::Import(args) => data::import(args).await?,
             DataCommands::Export(args) => data::export(args).await?,
             DataCommands::Verify(args) => data::verify(args).await?,
-            DataCommands::List(args) => data::list(args).await?,
+            DataCommands::List(args) => data::list(&args)?,
         },
-        Commands::Backtest(args) => backtest::run(args).await?,
+        Commands::Backtest(args) => backtest::run(&args)?,
         Commands::Info => print_info(),
     }
 

@@ -33,6 +33,7 @@ pub struct OrderSubmission {
 }
 
 /// Order callback for HFT strategies.
+#[allow(dead_code)]
 pub trait HftOrderCallback: Send + Sync {
     /// Called when an order is submitted.
     fn on_order_submitted(&self, order_id: &OrderId, request: &OrderRequest);
@@ -341,6 +342,7 @@ impl HftStrategyContext for HftStrategyContextImpl {
 /// HFT Strategy Runner.
 ///
 /// Manages the lifecycle and execution of HFT strategies.
+#[allow(dead_code)]
 pub struct HftStrategyRunner {
     /// Strategy instance.
     strategy: Box<dyn HftStrategy>,
@@ -350,6 +352,7 @@ pub struct HftStrategyRunner {
     running: RwLock<bool>,
 }
 
+#[allow(dead_code)]
 impl HftStrategyRunner {
     /// Creates a new strategy runner.
     #[must_use]
@@ -654,7 +657,7 @@ mod tests {
     fn test_order_flag_to_time_in_force() {
         // This is implicitly tested through the submit_order function
         // but we can verify the mapping logic
-        let (ctx, _rx) = create_test_context();
+        let (_ctx, _rx) = create_test_context();
 
         // The mapping is:
         // Normal -> GTC

@@ -4,6 +4,8 @@
 //! exclusive access to resources across cluster nodes.
 
 #![allow(unused_imports)]
+#![allow(clippy::map_unwrap_or)]
+#![allow(clippy::collapsible_if)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -28,7 +30,12 @@ pub enum LockError {
 
     /// Lock is held by another node.
     #[error("lock '{key}' is held by node '{holder}'")]
-    AlreadyHeld { key: String, holder: String },
+    AlreadyHeld {
+        /// The lock key.
+        key: String,
+        /// The node holding the lock.
+        holder: String,
+    },
 
     /// Lock not found.
     #[error("lock '{0}' not found")]
@@ -231,6 +238,7 @@ pub trait DistributedLock: Send + Sync {
 pub struct LockManager {
     node_id: String,
     locks: RwLock<HashMap<String, LockEntry>>,
+    #[allow(dead_code)]
     default_ttl: Duration,
     self_ref: RwLock<Option<Arc<LockManager>>>,
 }
@@ -511,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_lock_entry_expired() {
-        let mut entry = LockEntry::new("test-key", "node-1", Duration::from_millis(1));
+        let entry = LockEntry::new("test-key", "node-1", Duration::from_millis(1));
         std::thread::sleep(Duration::from_millis(10));
         assert!(entry.is_expired());
     }
@@ -544,7 +552,7 @@ mod tests {
         let guard = manager
             .try_acquire_lock("test-key", Duration::from_secs(30))
             .unwrap();
-        let lock_id = guard.lock_id().clone();
+        let _lock_id = guard.lock_id().clone();
 
         // Release via guard
         assert!(guard.release().is_ok());

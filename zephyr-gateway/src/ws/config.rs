@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 //! WebSocket client configuration.
 
 use serde::{Deserialize, Serialize};
@@ -61,6 +63,7 @@ pub struct WebSocketConfig {
 
     /// Additional headers for the WebSocket connection.
     #[serde(default)]
+    #[allow(clippy::disallowed_types)]
     pub headers: std::collections::HashMap<String, String>,
 }
 
@@ -120,6 +123,7 @@ impl Default for WebSocketConfig {
             auto_ping: default_auto_ping(),
             custom_ping_message: None,
             exchange: String::new(),
+            #[allow(clippy::disallowed_types)]
             headers: std::collections::HashMap::new(),
         }
     }
@@ -200,6 +204,7 @@ pub struct WebSocketConfigBuilder {
     auto_ping: Option<bool>,
     custom_ping_message: Option<String>,
     exchange: Option<String>,
+    #[allow(clippy::disallowed_types)]
     headers: std::collections::HashMap<String, String>,
 }
 

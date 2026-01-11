@@ -66,7 +66,7 @@ impl BacktestEvent {
 /// Event source for multi-symbol replay.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub(crate) struct EventSource {
+pub struct EventSource {
     /// Symbol for this source
     pub symbol: Symbol,
     /// Current index in the data
@@ -97,7 +97,7 @@ mod tests {
     fn create_test_tick() -> TickData {
         TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new(dec!(42000)).unwrap())
             .volume(Quantity::new(dec!(0.5)).unwrap())
             .build()
@@ -107,7 +107,7 @@ mod tests {
     fn create_test_bar() -> KlineData {
         KlineData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .period(KlinePeriod::Hour1)
             .open(Price::new(dec!(42000)).unwrap())
             .high(Price::new(dec!(42500)).unwrap())
@@ -123,7 +123,7 @@ mod tests {
     fn test_event_timestamp() {
         let tick = create_test_tick();
         let event = BacktestEvent::Tick(tick);
-        assert_eq!(event.timestamp().as_millis(), 1704067200000);
+        assert_eq!(event.timestamp().as_millis(), 1_704_067_200_000);
     }
 
     #[test]

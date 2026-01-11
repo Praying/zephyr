@@ -696,7 +696,7 @@ mod tests {
             "low24h": "40000.00",
             "volCcy24h": "1000000.00",
             "vol24h": "25.5",
-            "ts": "1672515782136"
+            "ts": "1_672_515_782_136"
         }"#;
 
         let ticker: OkxTicker = serde_json::from_str(json).unwrap();
@@ -708,11 +708,11 @@ mod tests {
     fn test_trade_deserialize() {
         let json = r#"{
             "instId": "BTC-USDT",
-            "tradeId": "123456789",
+            "tradeId": "123_456_789",
             "px": "42000.00",
             "sz": "0.001",
             "side": "buy",
-            "ts": "1672515782136"
+            "ts": "1_672_515_782_136"
         }"#;
 
         let trade: OkxTrade = serde_json::from_str(json).unwrap();

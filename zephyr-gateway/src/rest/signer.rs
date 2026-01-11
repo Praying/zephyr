@@ -1,5 +1,7 @@
 //! Request signing utilities.
 
+#![allow(clippy::cast_possible_truncation)]
+
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use zephyr_core::error::NetworkError;
@@ -276,12 +278,12 @@ mod tests {
     #[test]
     fn test_build_signed_query_string() {
         let signer = RequestSigner::hmac_sha256("secret");
-        let params = [("symbol", "BTCUSDT"), ("timestamp", "1234567890")];
-        let signed = build_signed_query_string(&params, &signer).unwrap();
+        let params = [("symbol", "BTCUSDT"), ("timestamp", "123_456_7890")];
+        let signed_query = build_signed_query_string(&params, &signer).unwrap();
 
-        assert!(signed.contains("symbol=BTCUSDT"));
-        assert!(signed.contains("timestamp=1234567890"));
-        assert!(signed.contains("&signature="));
+        assert!(signed_query.contains("symbol=BTCUSDT"));
+        assert!(signed_query.contains("timestamp=123_456_7890"));
+        assert!(signed_query.contains("&signature="));
     }
 
     #[test]

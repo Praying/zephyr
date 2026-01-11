@@ -686,14 +686,14 @@ mod tests {
     fn test_agg_trade_deserialize() {
         let json = r#"{
             "e": "aggTrade",
-            "E": 1672515782136,
+            "E": 1_672_515_782_136,
             "s": "BTCUSDT",
-            "a": 123456789,
+            "a": 123_456_789,
             "p": "42000.00",
             "q": "0.001",
             "f": 100,
             "l": 105,
-            "T": 1672515782136,
+            "T": 1_672_515_782_136,
             "m": true
         }"#;
 
@@ -706,7 +706,7 @@ mod tests {
     fn test_kline_deserialize() {
         let json = r#"{
             "e": "kline",
-            "E": 1672515782136,
+            "E": 1_672_515_782_136,
             "s": "BTCUSDT",
             "k": {
                 "t": 1672515780000,

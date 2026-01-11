@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_format_timestamp() {
         let ts = format_timestamp();
-        assert!(ts.contains("T"));
-        assert!(ts.ends_with("Z"));
+        assert!(ts.contains('T'));
+        assert!(ts.ends_with('Z'));
     }
 }

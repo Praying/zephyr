@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 //! Hyperliquid market data parser implementation.
 //!
 //! Implements the [`MarketDataParser`] trait for Hyperliquid WebSocket streams.
@@ -6,7 +8,7 @@
 use async_trait::async_trait;
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{debug, info, warn};
@@ -18,7 +20,10 @@ use zephyr_core::types::{Amount, Price, Quantity, Symbol, Timestamp};
 
 use crate::ws::{WebSocketCallback, WebSocketClient, WebSocketConfig, WebSocketMessage};
 
-use super::types::*;
+use super::types::{
+    HyperliquidAllMids, HyperliquidCandle, HyperliquidL2Book, HyperliquidMarket,
+    HyperliquidSubParams, HyperliquidSubscription, HyperliquidTrade, HyperliquidWsResponse,
+};
 
 /// Hyperliquid market data parser.
 ///
@@ -62,9 +67,10 @@ pub struct HyperliquidParser {
     /// Connection state
     connected: Arc<AtomicBool>,
     /// Asset index mapping (coin name -> index)
-    asset_indices: Arc<RwLock<HashMap<String, u32>>>,
+    asset_indices: Arc<RwLock<std::collections::HashMap<String, u32>>>,
     /// Last mid prices cache
-    last_mids: Arc<RwLock<HashMap<String, Price>>>,
+    #[allow(dead_code)]
+    last_mids: Arc<RwLock<std::collections::HashMap<String, Price>>>,
     /// Use testnet
     testnet: bool,
 }
@@ -92,8 +98,8 @@ impl HyperliquidParser {
             callback: None,
             subscribed_symbols: Arc::new(RwLock::new(HashSet::new())),
             connected: Arc::new(AtomicBool::new(false)),
-            asset_indices: Arc::new(RwLock::new(HashMap::new())),
-            last_mids: Arc::new(RwLock::new(HashMap::new())),
+            asset_indices: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            last_mids: Arc::new(RwLock::new(std::collections::HashMap::new())),
             testnet: false,
         }
     }
@@ -121,11 +127,8 @@ impl HyperliquidParser {
     fn to_hyperliquid_coin(symbol: &Symbol) -> String {
         // Hyperliquid uses just the base asset name (e.g., "BTC", "ETH")
         let s = symbol.as_str();
-        if let Some(pos) = s.find('-') {
-            s[..pos].to_string()
-        } else {
-            s.to_string()
-        }
+        s.find('-')
+            .map_or_else(|| s.to_string(), |pos| s[..pos].to_string())
     }
 
     /// Converts a Hyperliquid coin to standard symbol format (e.g., "BTC" -> "BTC-USD").
@@ -135,10 +138,11 @@ impl HyperliquidParser {
     }
 
     /// Parses a WebSocket message and dispatches to callback.
+    #[allow(dead_code)]
+    #[allow(clippy::too_many_lines)]
     async fn handle_message(&self, text: &str) {
-        let callback = match &self.callback {
-            Some(cb) => cb,
-            None => return,
+        let Some(callback) = &self.callback else {
+            return;
         };
 
         // Try to parse as WebSocket response
@@ -150,10 +154,10 @@ impl HyperliquidParser {
                     }
                 }
                 "l2Book" => {
-                    if let Ok(book) = serde_json::from_value::<HyperliquidL2Book>(response.data) {
-                        if let Some(orderbook) = self.parse_l2_book(&book) {
-                            callback.on_orderbook(orderbook).await;
-                        }
+                    if let Ok(book) = serde_json::from_value::<HyperliquidL2Book>(response.data)
+                        && let Some(orderbook) = Self::parse_l2_book(&book)
+                    {
+                        callback.on_orderbook(orderbook).await;
                     }
                 }
                 "trades" => {
@@ -161,7 +165,7 @@ impl HyperliquidParser {
                         serde_json::from_value::<Vec<HyperliquidTrade>>(response.data)
                     {
                         for trade in &trades {
-                            if let Some(tick) = self.parse_trade(trade) {
+                            if let Some(tick) = Self::parse_trade(trade) {
                                 callback.on_tick(tick).await;
                             }
                         }
@@ -172,7 +176,7 @@ impl HyperliquidParser {
                         serde_json::from_value::<Vec<HyperliquidCandle>>(response.data)
                     {
                         for candle in &candles {
-                            if let Some(kline) = self.parse_candle(candle, &response.channel) {
+                            if let Some(kline) = Self::parse_candle(candle, &response.channel) {
                                 debug!(
                                     symbol = %kline.symbol,
                                     period = %kline.period,
@@ -194,6 +198,7 @@ impl HyperliquidParser {
     }
 
     /// Handles all mids update.
+    #[allow(dead_code)]
     async fn handle_all_mids(&self, mids: &HyperliquidAllMids, callback: &dyn ParserCallback) {
         let timestamp = Timestamp::now();
 
@@ -232,8 +237,9 @@ impl HyperliquidParser {
         }
     }
 
-    /// Parses L2 order book to OrderBook.
-    fn parse_l2_book(&self, book: &HyperliquidL2Book) -> Option<OrderBook> {
+    /// Parses L2 order book to `OrderBook`.
+    #[allow(dead_code)]
+    fn parse_l2_book(book: &HyperliquidL2Book) -> Option<OrderBook> {
         let symbol = Self::from_hyperliquid_coin(&book.coin)?;
         let timestamp = Timestamp::new(book.time).ok()?;
 
@@ -270,8 +276,9 @@ impl HyperliquidParser {
         })
     }
 
-    /// Parses trade to TickData.
-    fn parse_trade(&self, trade: &HyperliquidTrade) -> Option<TickData> {
+    /// Parses trade to `TickData`.
+    #[allow(dead_code)]
+    fn parse_trade(trade: &HyperliquidTrade) -> Option<TickData> {
         let symbol = Self::from_hyperliquid_coin(&trade.coin)?;
         let price = Price::new(trade.price.parse().ok()?).ok()?;
         let volume = Quantity::new(trade.size.parse().ok()?).ok()?;
@@ -286,8 +293,9 @@ impl HyperliquidParser {
             .ok()
     }
 
-    /// Parses candle to KlineData.
-    fn parse_candle(&self, candle: &HyperliquidCandle, channel: &str) -> Option<KlineData> {
+    /// Parses candle to `KlineData`.
+    #[allow(dead_code)]
+    fn parse_candle(candle: &HyperliquidCandle, channel: &str) -> Option<KlineData> {
         // Extract coin and interval from channel (format: "candle:BTC:1m")
         let parts: Vec<&str> = channel.split(':').collect();
         let coin = parts.get(1)?;
@@ -330,12 +338,13 @@ impl HyperliquidParser {
     }
 
     /// Gets the asset index for a coin.
+    #[must_use]
     pub fn get_asset_index(&self, coin: &str) -> Option<u32> {
         self.asset_indices.read().get(coin).copied()
     }
 
     /// Sets the asset index mapping.
-    pub fn set_asset_indices(&self, indices: HashMap<String, u32>) {
+    pub fn set_asset_indices(&self, indices: std::collections::HashMap<String, u32>) {
         *self.asset_indices.write() = indices;
     }
 }
@@ -347,6 +356,7 @@ impl Default for HyperliquidParser {
 }
 
 /// Internal WebSocket callback handler.
+#[allow(dead_code)]
 struct HyperliquidWsCallback {
     parser: Arc<HyperliquidParser>,
 }
@@ -431,7 +441,7 @@ impl MarketDataParser for HyperliquidParser {
         let ws_client = self
             .ws_client
             .as_mut()
-            .ok_or(NetworkError::ConnectionFailed {
+            .ok_or_else(|| NetworkError::ConnectionFailed {
                 reason: "Parser not initialized".to_string(),
             })?;
 
@@ -472,7 +482,7 @@ impl MarketDataParser for HyperliquidParser {
         let ws_client = self
             .ws_client
             .as_ref()
-            .ok_or(NetworkError::ConnectionFailed {
+            .ok_or_else(|| NetworkError::ConnectionFailed {
                 reason: "Parser not initialized".to_string(),
             })?;
 
@@ -526,7 +536,7 @@ impl MarketDataParser for HyperliquidParser {
         let ws_client = self
             .ws_client
             .as_ref()
-            .ok_or(NetworkError::ConnectionFailed {
+            .ok_or_else(|| NetworkError::ConnectionFailed {
                 reason: "Parser not initialized".to_string(),
             })?;
 
@@ -584,7 +594,7 @@ impl MarketDataParser for HyperliquidParser {
         self.subscribed_symbols.read().iter().cloned().collect()
     }
 
-    fn exchange(&self) -> &str {
+    fn exchange(&self) -> &'static str {
         "hyperliquid"
     }
 }
@@ -592,6 +602,8 @@ impl MarketDataParser for HyperliquidParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hyperliquid::HyperliquidBookLevel;
+    use std::collections::HashMap;
 
     #[test]
     fn test_to_hyperliquid_coin() {
@@ -630,28 +642,28 @@ mod tests {
 
     #[test]
     fn test_parse_trade() {
-        let parser = HyperliquidParser::new();
+        let _parser = HyperliquidParser::new();
         let trade = HyperliquidTrade {
             coin: "BTC".to_string(),
             side: "B".to_string(),
             price: "42000.0".to_string(),
             size: "0.1".to_string(),
             hash: "0x123".to_string(),
-            time: 1672515782136,
+            time: 1_672_515_782_136,
             tid: 12345,
         };
 
-        let tick = parser.parse_trade(&trade).unwrap();
+        let tick = HyperliquidParser::parse_trade(&trade).unwrap();
         assert_eq!(tick.symbol.as_str(), "BTC-USD");
         assert_eq!(tick.price.as_decimal(), Decimal::from(42000));
     }
 
     #[test]
     fn test_parse_l2_book() {
-        let parser = HyperliquidParser::new();
+        let _parser = HyperliquidParser::new();
         let book = HyperliquidL2Book {
             coin: "BTC".to_string(),
-            time: 1672515782136,
+            time: 1_672_515_782_136,
             levels: vec![
                 vec![
                     HyperliquidBookLevel {
@@ -680,7 +692,7 @@ mod tests {
             ],
         };
 
-        let orderbook = parser.parse_l2_book(&book).unwrap();
+        let orderbook = HyperliquidParser::parse_l2_book(&book).unwrap();
         assert_eq!(orderbook.symbol.as_str(), "BTC-USD");
         assert_eq!(orderbook.bids.len(), 2);
         assert_eq!(orderbook.asks.len(), 2);

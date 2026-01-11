@@ -373,10 +373,10 @@ impl AdvancedMetricsCalculator {
         sorted.sort();
 
         let n = sorted.len();
-        let p5_idx = n * 5 / 100;
+        let p5_index = n * 5 / 100;
         let p95_idx = n * 95 / 100;
 
-        let p5 = sorted.get(p5_idx)?;
+        let p5 = sorted.get(p5_index)?;
         let p95 = sorted.get(p95_idx)?;
 
         if p5.abs().is_zero() {
@@ -514,10 +514,10 @@ mod tests {
         calc.enable_benchmark();
 
         // Portfolio returns
-        let portfolio_returns = vec![dec!(0.02), dec!(-0.01), dec!(0.03), dec!(-0.02), dec!(0.01)];
+        let portfolio_returns = [dec!(0.02), dec!(-0.01), dec!(0.03), dec!(-0.02), dec!(0.01)];
 
         // Benchmark returns (slightly different)
-        let benchmark_returns = vec![
+        let benchmark_returns = [
             dec!(0.015),
             dec!(-0.005),
             dec!(0.025),

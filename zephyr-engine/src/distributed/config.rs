@@ -108,10 +108,10 @@ impl DistributedExecutorConfig {
             return Err(ConfigValidationError::InvalidTimeouts);
         }
 
-        if let Some(quorum) = self.min_quorum {
-            if quorum > self.cluster_size() {
-                return Err(ConfigValidationError::InvalidQuorum);
-            }
+        if let Some(quorum) = self.min_quorum
+            && quorum > self.cluster_size()
+        {
+            return Err(ConfigValidationError::InvalidQuorum);
         }
 
         Ok(())

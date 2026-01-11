@@ -1,8 +1,8 @@
-//! Value at Risk (VaR) calculation module.
+//! Value at Risk (`VaR`) calculation module.
 //!
-//! This module provides VaR calculation methods:
-//! - Historical VaR: Based on historical returns distribution
-//! - Parametric VaR: Based on normal distribution assumption
+//! This module provides `VaR` calculation methods:
+//! - Historical `VaR`: Based on historical returns distribution
+//! - Parametric `VaR`: Based on normal distribution assumption
 //!
 //! # Example
 //!
@@ -24,7 +24,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-/// VaR calculation method.
+/// `VaR` calculation method.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum VarMethod {
@@ -37,7 +37,7 @@ pub enum VarMethod {
     MonteCarlo,
 }
 
-/// VaR calculation configuration.
+/// `VaR` calculation configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VarConfig {
     /// Default confidence level (e.g., 0.95 for 95%)
@@ -65,7 +65,7 @@ impl Default for VarConfig {
 }
 
 impl VarConfig {
-    /// Creates a new VaR configuration with the specified confidence level.
+    /// Creates a new `VaR` configuration with the specified confidence level.
     #[must_use]
     pub fn with_confidence(confidence_level: Decimal) -> Self {
         Self {
@@ -90,10 +90,10 @@ impl VarConfig {
     }
 }
 
-/// VaR calculation result.
+/// `VaR` calculation result.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VarResult {
-    /// VaR value (positive number representing potential loss)
+    /// `VaR` value (positive number representing potential loss)
     pub var: Decimal,
     /// Confidence level used
     pub confidence_level: Decimal,
@@ -103,24 +103,24 @@ pub struct VarResult {
     pub method: VarMethod,
     /// Number of observations used
     pub observations: usize,
-    /// Expected Shortfall (CVaR) if calculated
+    /// Expected Shortfall (`CVaR`) if calculated
     pub expected_shortfall: Option<Decimal>,
 }
 
-/// VaR calculator.
+/// `VaR` calculator.
 #[derive(Debug, Clone)]
 pub struct VarCalculator {
     config: VarConfig,
 }
 
 impl VarCalculator {
-    /// Creates a new VaR calculator with the given configuration.
+    /// Creates a new `VaR` calculator with the given configuration.
     #[must_use]
     pub const fn new(config: VarConfig) -> Self {
         Self { config }
     }
 
-    /// Creates a new VaR calculator with default configuration.
+    /// Creates a new `VaR` calculator with default configuration.
     #[must_use]
     pub fn with_defaults() -> Self {
         Self::new(VarConfig::default())
@@ -132,9 +132,9 @@ impl VarCalculator {
         &self.config
     }
 
-    /// Calculates Historical VaR from a series of returns.
+    /// Calculates Historical `VaR` from a series of returns.
     ///
-    /// Historical VaR uses the empirical distribution of past returns
+    /// Historical `VaR` uses the empirical distribution of past returns
     /// to estimate potential losses at a given confidence level.
     ///
     /// # Arguments
@@ -144,7 +144,7 @@ impl VarCalculator {
     ///
     /// # Returns
     ///
-    /// VaR value as a positive decimal representing potential loss.
+    /// `VaR` value as a positive decimal representing potential loss.
     /// Returns `None` if insufficient data.
     #[must_use]
     pub fn calculate_historical_var(
@@ -171,7 +171,7 @@ impl VarCalculator {
         let var = -sorted_returns[index];
 
         // Calculate Expected Shortfall (average of losses beyond VaR)
-        let es = self.calculate_expected_shortfall(&sorted_returns, index);
+        let es = Some(Self::calculate_expected_shortfall(&sorted_returns, index));
 
         // Scale for time horizon using square root of time rule
         let time_scale = self.time_scale_factor();
@@ -188,9 +188,9 @@ impl VarCalculator {
         })
     }
 
-    /// Calculates Parametric VaR assuming normal distribution.
+    /// Calculates Parametric `VaR` assuming normal distribution.
     ///
-    /// Parametric VaR uses the mean and standard deviation of returns
+    /// Parametric `VaR` uses the mean and standard deviation of returns
     /// with a normal distribution assumption.
     ///
     /// # Arguments
@@ -200,7 +200,7 @@ impl VarCalculator {
     ///
     /// # Returns
     ///
-    /// VaR value as a positive decimal representing potential loss.
+    /// `VaR` value as a positive decimal representing potential loss.
     #[must_use]
     pub fn calculate_parametric_var(
         &self,
@@ -221,14 +221,14 @@ impl VarCalculator {
         let variance = if self.config.use_ewma {
             self.calculate_ewma_variance(returns)
         } else {
-            self.calculate_sample_variance(returns, mean)
+            Self::calculate_sample_variance(returns, mean)
         };
 
         // Calculate standard deviation
         let std_dev = decimal_sqrt(variance)?;
 
         // Get z-score for confidence level
-        let z_score = self.get_z_score(confidence_level);
+        let z_score = Self::get_z_score(confidence_level);
 
         // VaR = -mean + z * std_dev (for loss, we want positive value)
         let var = z_score * std_dev - mean;
@@ -240,7 +240,7 @@ impl VarCalculator {
         // Calculate Expected Shortfall for normal distribution
         // ES = mean + std_dev * phi(z) / (1 - confidence)
         // where phi is the standard normal PDF
-        let es = self.calculate_parametric_es(mean, std_dev, confidence_level, z_score);
+        let es = Self::calculate_parametric_es(mean, std_dev, confidence_level, z_score);
 
         Some(VarResult {
             var: scaled_var.max(Decimal::ZERO),
@@ -252,14 +252,14 @@ impl VarCalculator {
         })
     }
 
-    /// Calculates VaR using the configured default method.
+    /// Calculates `VaR` using the configured default method.
     #[must_use]
     pub fn calculate_var(&self, returns: &[Decimal]) -> Option<VarResult> {
         self.calculate_historical_var(returns, self.config.confidence_level)
     }
 
     /// Calculates sample variance.
-    fn calculate_sample_variance(&self, returns: &[Decimal], mean: Decimal) -> Decimal {
+    fn calculate_sample_variance(returns: &[Decimal], mean: Decimal) -> Decimal {
         let n = returns.len();
         if n <= 1 {
             return Decimal::ZERO;
@@ -296,26 +296,19 @@ impl VarCalculator {
     }
 
     /// Calculates Expected Shortfall from sorted returns.
-    fn calculate_expected_shortfall(
-        &self,
-        sorted_returns: &[Decimal],
-        var_index: usize,
-    ) -> Option<Decimal> {
+    fn calculate_expected_shortfall(sorted_returns: &[Decimal], var_index: usize) -> Decimal {
         if var_index == 0 {
-            return Some(-sorted_returns[0]);
+            return -sorted_returns[0];
         }
 
         // Average of all returns worse than VaR
         let tail_returns: Vec<Decimal> = sorted_returns[..=var_index].to_vec();
         let sum: Decimal = tail_returns.iter().copied().sum();
-        let es = -sum / Decimal::from(tail_returns.len());
-
-        Some(es)
+        -sum / Decimal::from(tail_returns.len())
     }
 
     /// Calculates parametric Expected Shortfall.
     fn calculate_parametric_es(
-        &self,
         mean: Decimal,
         std_dev: Decimal,
         confidence_level: Decimal,
@@ -336,7 +329,7 @@ impl VarCalculator {
     }
 
     /// Gets the z-score for a given confidence level.
-    fn get_z_score(&self, confidence_level: Decimal) -> Decimal {
+    fn get_z_score(confidence_level: Decimal) -> Decimal {
         // Common z-scores for standard confidence levels
         // Using lookup table for common values, approximation for others
         let cl_100 = (confidence_level * Decimal::ONE_HUNDRED)
@@ -558,7 +551,7 @@ mod tests {
         let calculator = VarCalculator::new(config);
         let returns = sample_returns();
 
-        let result_10d = calculator
+        let result_10day = calculator
             .calculate_historical_var(&returns, dec!(0.95))
             .unwrap();
 
@@ -569,7 +562,7 @@ mod tests {
             .unwrap();
 
         // 10-day VaR should be approximately sqrt(10) times 1-day VaR
-        let ratio = result_10d.var / result_1d.var;
+        let ratio = result_10day.var / result_1d.var;
         let expected_ratio = decimal_sqrt(dec!(10)).unwrap();
         let diff = (ratio - expected_ratio).abs();
         assert!(diff < dec!(0.01));
@@ -600,15 +593,15 @@ mod tests {
     #[test]
     fn test_z_scores() {
         let config = VarConfig::default();
-        let calculator = VarCalculator::new(config);
+        let _calculator = VarCalculator::new(config);
 
-        let z_90 = calculator.get_z_score(dec!(0.90));
+        let z_90 = VarCalculator::get_z_score(dec!(0.90));
         assert!((z_90 - dec!(1.282)).abs() < dec!(0.001));
 
-        let z_95 = calculator.get_z_score(dec!(0.95));
+        let z_95 = VarCalculator::get_z_score(dec!(0.95));
         assert!((z_95 - dec!(1.645)).abs() < dec!(0.001));
 
-        let z_99 = calculator.get_z_score(dec!(0.99));
+        let z_99 = VarCalculator::get_z_score(dec!(0.99));
         assert!((z_99 - dec!(2.326)).abs() < dec!(0.001));
     }
 

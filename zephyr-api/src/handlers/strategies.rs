@@ -186,6 +186,7 @@ pub async fn get_strategy(
         created_at: strategy.created_at,
         updated_at: strategy.updated_at,
     };
+    drop(strategy);
 
     Ok(ApiResponse::success(detail))
 }
@@ -217,6 +218,7 @@ pub async fn start_strategy(
 
     strategy.status = StrategyStatus::Running;
     strategy.updated_at = Utc::now();
+    drop(strategy);
 
     Ok(EmptyResponse::success_with_message("Strategy started"))
 }
@@ -248,6 +250,7 @@ pub async fn stop_strategy(
 
     strategy.status = StrategyStatus::Stopped;
     strategy.updated_at = Utc::now();
+    drop(strategy);
 
     Ok(EmptyResponse::success_with_message("Strategy stopped"))
 }

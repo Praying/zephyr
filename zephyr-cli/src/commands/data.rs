@@ -196,7 +196,7 @@ pub async fn export(args: ExportArgs) -> Result<()> {
 
             match args.format.as_str() {
                 "json" => serde_json::to_string_pretty(&ticks)?,
-                "csv" => ticks_to_csv(&ticks)?,
+                "csv" => ticks_to_csv(&ticks),
                 _ => anyhow::bail!("Unknown format: {}. Use 'json' or 'csv'", args.format),
             }
         }
@@ -210,7 +210,7 @@ pub async fn export(args: ExportArgs) -> Result<()> {
 
             match args.format.as_str() {
                 "json" => serde_json::to_string_pretty(&klines)?,
-                "csv" => klines_to_csv(&klines)?,
+                "csv" => klines_to_csv(&klines),
                 _ => anyhow::bail!("Unknown format: {}. Use 'json' or 'csv'", args.format),
             }
         }
@@ -274,7 +274,7 @@ pub async fn verify(args: VerifyArgs) -> Result<()> {
 /// # Errors
 ///
 /// Returns error if listing fails.
-pub async fn list(args: ListArgs) -> Result<()> {
+pub fn list(args: &ListArgs) -> Result<()> {
     info!("Listing data in {}", args.data_dir);
 
     let data_dir = PathBuf::from(&args.data_dir);
@@ -309,33 +309,34 @@ fn list_data_files(dir: &PathBuf, symbol_filter: Option<&str>, data_type: &str) 
     let entries = std::fs::read_dir(dir).context("Failed to read directory")?;
 
     let mut files: Vec<_> = entries
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.path().is_file())
         .collect();
 
-    files.sort_by_key(|e| e.file_name());
+    files.sort_by_key(std::fs::DirEntry::file_name);
 
     for entry in files {
         let file_name = entry.file_name();
         let file_name_str = file_name.to_string_lossy();
 
         // Apply symbol filter if provided
-        if let Some(symbol) = symbol_filter {
-            if !file_name_str.contains(symbol) {
-                continue;
-            }
+        if let Some(symbol) = symbol_filter
+            && !file_name_str.contains(symbol)
+        {
+            continue;
         }
 
         let metadata = entry.metadata()?;
         let size = metadata.len();
         let size_str = format_size(size);
 
-        println!("  {} ({}) - {}", file_name_str, data_type, size_str);
+        println!("  {file_name_str} ({data_type}) - {size_str}");
     }
 
     Ok(())
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn format_size(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = KB * 1024;
@@ -352,7 +353,8 @@ fn format_size(bytes: u64) -> String {
     }
 }
 
-fn ticks_to_csv(ticks: &[zephyr_core::data::TickData]) -> Result<String> {
+#[allow(clippy::format_push_string)]
+fn ticks_to_csv(ticks: &[zephyr_core::data::TickData]) -> String {
     let mut csv =
         String::from("timestamp,symbol,price,volume,best_bid,best_bid_qty,best_ask,best_ask_qty\n");
 
@@ -387,10 +389,11 @@ fn ticks_to_csv(ticks: &[zephyr_core::data::TickData]) -> Result<String> {
         ));
     }
 
-    Ok(csv)
+    csv
 }
 
-fn klines_to_csv(klines: &[zephyr_core::data::KlineData]) -> Result<String> {
+#[allow(clippy::format_push_string)]
+fn klines_to_csv(klines: &[zephyr_core::data::KlineData]) -> String {
     let mut csv = String::from("timestamp,symbol,period,open,high,low,close,volume,turnover\n");
 
     for kline in klines {
@@ -408,5 +411,5 @@ fn klines_to_csv(klines: &[zephyr_core::data::KlineData]) -> Result<String> {
         ));
     }
 
-    Ok(csv)
+    csv
 }

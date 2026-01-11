@@ -1,3 +1,7 @@
+#![allow(clippy::disallowed_types)]
+// We use if let/else instead of map_or for clarity in find operations
+#![allow(clippy::option_if_let_else)]
+
 //! Performance alerting with threshold monitoring.
 //!
 //! This module provides:
@@ -353,8 +357,7 @@ impl PerformanceMonitor {
                 },
                 severity,
                 format!(
-                    "Performance regression detected for {}: {:.2}% degradation",
-                    metric, degradation_percent
+                    "Performance regression detected for {metric}: {degradation_percent:.2}% degradation"
                 ),
             );
         }
@@ -381,8 +384,7 @@ impl PerformanceMonitor {
                 },
                 severity,
                 format!(
-                    "Trend degradation detected for {}: {} consecutive degrading samples",
-                    metric, consecutive_degrading
+                    "Trend degradation detected for {metric}: {consecutive_degrading} consecutive degrading samples"
                 ),
             );
         }
@@ -407,7 +409,7 @@ impl PerformanceMonitor {
     /// Trigger an alert.
     fn trigger_alert(&self, alert_type: AlertType, severity: AlertSeverity, message: String) {
         // Check cooldown
-        let alert_key = format!("{:?}", alert_type);
+        let alert_key = format!("{alert_type:?}");
         let now = Utc::now();
 
         {
@@ -528,6 +530,14 @@ mod tests {
         }
     }
 
+    // Create a wrapper that implements AlertCallback
+    struct CallbackWrapper(Arc<TestCallback>);
+    impl AlertCallback for CallbackWrapper {
+        fn on_alert(&self, alert: &PerformanceAlert) {
+            self.0.on_alert(alert);
+        }
+    }
+
     #[test]
     fn test_performance_alert_creation() {
         let alert = PerformanceAlert::new(
@@ -632,14 +642,6 @@ mod tests {
             count: AtomicUsize::new(0),
         });
         let callback_clone = Arc::clone(&callback);
-
-        // Create a wrapper that implements AlertCallback
-        struct CallbackWrapper(Arc<TestCallback>);
-        impl AlertCallback for CallbackWrapper {
-            fn on_alert(&self, alert: &PerformanceAlert) {
-                self.0.on_alert(alert);
-            }
-        }
 
         monitor.register_callback(Box::new(CallbackWrapper(callback_clone)));
 

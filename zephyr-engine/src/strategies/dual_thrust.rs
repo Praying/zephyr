@@ -42,6 +42,10 @@
 //! );
 //! ```
 
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -406,7 +410,7 @@ impl CtaStrategy for DualThrustStrategy {
                 self.config.lookback_days + 2,
             );
 
-            if bars.len() >= self.config.lookback_days + 1 {
+            if bars.len() > self.config.lookback_days {
                 // Calculate range from historical data
                 if let Some(range_data) = self.calculate_range(bars) {
                     // Use today's open as base price
@@ -649,7 +653,7 @@ mod tests {
         use zephyr_core::types::{Amount, Timestamp};
 
         let symbol = Symbol::new("BTC-USDT").unwrap();
-        let base_ts = 1704067200000i64; // 2024-01-01 00:00:00 UTC
+        let base_ts = 1_704_067_200_000i64; // 2024-01-01 00:00:00 UTC
         let day_ms = 24 * 60 * 60 * 1000i64;
 
         (0..6)

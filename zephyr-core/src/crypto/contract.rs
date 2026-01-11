@@ -880,7 +880,7 @@ mod tests {
         let mut manager = ContractManager::new();
         let contract = test_contract();
 
-        manager.register(contract.clone());
+        manager.register(contract);
 
         let retrieved = manager.get(&test_symbol(), &Exchange::Binance).unwrap();
         assert_eq!(retrieved.symbol, test_symbol());

@@ -1,5 +1,7 @@
 //! WebSocket connection state management.
 
+#![allow(clippy::redundant_pub_crate)]
+
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 

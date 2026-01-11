@@ -381,11 +381,11 @@ mod tests {
 
     #[test]
     fn test_load_yaml() {
-        let yaml = r#"
+        let yaml = r"
 host: localhost
 port: 8080
 debug: true
-"#;
+";
         let loader = ConfigLoader::new();
         let config: TestConfig = loader.load_str(yaml, ConfigFormat::Yaml).unwrap();
 
@@ -614,8 +614,8 @@ mod file_tests {
 
         ConfigLoader::save_file(&original, &path).unwrap();
 
-        let loader = ConfigLoader::new();
-        let loaded: FileTestConfig = loader.load_file(&path).unwrap();
+        let cfg_loader = ConfigLoader::new();
+        let loaded: FileTestConfig = cfg_loader.load_file(&path).unwrap();
 
         assert_eq!(original, loaded);
 

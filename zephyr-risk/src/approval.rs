@@ -22,6 +22,12 @@
 //! ```
 
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::disallowed_types)]
+#![allow(clippy::or_fun_call)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::significant_drop_tightening)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::map_unwrap_or)]
 
 use parking_lot::RwLock;
 use rust_decimal::Decimal;
@@ -214,7 +220,8 @@ impl ApprovalRequest {
     ) -> Self {
         let now = Timestamp::now();
         let expires_at =
-            Timestamp::new(now.as_millis() + (expiry_secs * 1000) as i64).unwrap_or(now);
+            Timestamp::new(now.as_millis() + i64::try_from(expiry_secs * 1000).unwrap_or(i64::MAX))
+                .unwrap_or(now);
 
         Self {
             id: generate_request_id(),
@@ -272,8 +279,7 @@ impl ApprovalRequest {
     #[must_use]
     pub fn has_sufficient_approvals(&self) -> bool {
         self.highest_approval_level()
-            .map(|level| level >= self.required_level)
-            .unwrap_or(false)
+            .is_some_and(|level| level >= self.required_level)
     }
 }
 
@@ -288,6 +294,7 @@ pub struct ApprovalThreshold {
 
 /// Approval workflow configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct ApprovalConfig {
     /// Whether approval workflow is enabled
     pub enabled: bool,
@@ -322,15 +329,15 @@ impl Default for ApprovalConfig {
                     level: ApprovalLevel::Level2,
                 },
                 ApprovalThreshold {
-                    min_amount: Amount::new_unchecked(Decimal::new(100000, 0)),
+                    min_amount: Amount::new_unchecked(Decimal::new(100_000, 0)),
                     level: ApprovalLevel::Level3,
                 },
                 ApprovalThreshold {
-                    min_amount: Amount::new_unchecked(Decimal::new(500000, 0)),
+                    min_amount: Amount::new_unchecked(Decimal::new(500_000, 0)),
                     level: ApprovalLevel::Level4,
                 },
                 ApprovalThreshold {
-                    min_amount: Amount::new_unchecked(Decimal::new(1000000, 0)),
+                    min_amount: Amount::new_unchecked(Decimal::new(1_000_000, 0)),
                     level: ApprovalLevel::Level5,
                 },
             ],
@@ -434,11 +441,10 @@ impl ApprovalWorkflow {
     /// Gets the required approval level for an order.
     #[must_use]
     pub fn get_required_level(&self, symbol: &Symbol, amount: Amount) -> Option<ApprovalLevel> {
-        let config = self.config.read();
         let amount_value = amount.as_decimal().abs();
 
         // Check symbol-specific thresholds first
-        if let Some(thresholds) = config.symbol_thresholds.get(symbol) {
+        if let Some(thresholds) = self.config.read().symbol_thresholds.get(symbol) {
             for threshold in thresholds.iter().rev() {
                 if amount_value >= threshold.min_amount.as_decimal() {
                     return Some(threshold.level);
@@ -447,7 +453,7 @@ impl ApprovalWorkflow {
         }
 
         // Fall back to global thresholds
-        for threshold in config.amount_thresholds.iter().rev() {
+        for threshold in self.config.read().amount_thresholds.iter().rev() {
             if amount_value >= threshold.min_amount.as_decimal() {
                 return Some(threshold.level);
             }
@@ -512,6 +518,16 @@ impl ApprovalWorkflow {
     }
 
     /// Processes an approval decision.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The approver is not found
+    /// - The approver is inactive
+    /// - The request is not found
+    /// - The request is not pending
+    /// - The request has expired
+    #[allow(clippy::too_many_arguments)]
     pub fn process_decision(
         &self,
         request_id: &str,
@@ -520,11 +536,11 @@ impl ApprovalWorkflow {
         comment: Option<String>,
     ) -> Result<ApprovalStatus, ApprovalError> {
         // Get approver
-        let approver = self
+        let approver_info = self
             .get_approver(approver_id)
             .ok_or(ApprovalError::ApproverNotFound(approver_id.to_string()))?;
 
-        if !approver.active {
+        if !approver_info.active {
             return Err(ApprovalError::ApproverInactive(approver_id.to_string()));
         }
 
@@ -559,7 +575,7 @@ impl ApprovalWorkflow {
                 .highest_approval_level()
                 .map(|l| l.value())
                 .unwrap_or(0);
-            if approver.level.value() > current_max + 1 {
+            if approver_info.level.value() > current_max + 1 {
                 return Err(ApprovalError::SequentialApprovalRequired);
             }
         }
@@ -568,7 +584,7 @@ impl ApprovalWorkflow {
         // Record decision
         let decision = ApprovalDecision {
             approver_id: approver_id.to_string(),
-            level: approver.level,
+            level: approver_info.level,
             approved,
             timestamp: Timestamp::now(),
             comment,
@@ -608,6 +624,13 @@ impl ApprovalWorkflow {
     }
 
     /// Cancels a pending request.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The request is not found
+    /// - The requester is not authorized
+    /// - The request is not pending
     pub fn cancel_request(
         &self,
         request_id: &str,
@@ -713,7 +736,7 @@ impl std::fmt::Debug for ApprovalWorkflow {
         f.debug_struct("ApprovalWorkflow")
             .field("enabled", &self.is_enabled())
             .field("pending_count", &self.pending_requests.read().len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -764,7 +787,7 @@ fn generate_request_id() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    format!("apr-{:016x}", timestamp)
+    format!("apr-{timestamp:016x}")
 }
 
 #[cfg(test)]

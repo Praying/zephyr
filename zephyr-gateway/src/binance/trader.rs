@@ -1129,7 +1129,7 @@ mod tests {
             order_id: 12345,
             order_list_id: None,
             client_order_id: "test123".to_string(),
-            transact_time: Some(1672515782136),
+            transact_time: Some(1_672_515_782_136),
             price: Some("42000.00".to_string()),
             orig_qty: Some("0.1".to_string()),
             executed_qty: Some("0.05".to_string()),

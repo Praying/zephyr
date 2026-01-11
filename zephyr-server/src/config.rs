@@ -3,6 +3,8 @@
 //! Provides configuration structures for the Zephyr server,
 //! including component initialization settings.
 
+#![allow(clippy::collapsible_if, clippy::doc_markdown)]
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -12,7 +14,7 @@ use zephyr_core::config::ZephyrConfig;
 /// Server configuration.
 ///
 /// Contains all settings needed to start and run the Zephyr server.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ServerConfig {
     /// Base Zephyr configuration.
     #[serde(flatten)]
@@ -25,16 +27,6 @@ pub struct ServerConfig {
     /// Shutdown configuration.
     #[serde(default)]
     pub shutdown: ShutdownConfig,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            zephyr: ZephyrConfig::default(),
-            plugins: PluginConfig::default(),
-            shutdown: ShutdownConfig::default(),
-        }
-    }
 }
 
 impl ServerConfig {
@@ -65,22 +57,22 @@ impl ServerConfig {
             .map_err(|e| ConfigValidationError::InvalidConfig(e.to_string()))?;
 
         // Validate plugin paths exist if specified
-        if let Some(ref path) = self.plugins.strategy_dir {
-            if !path.exists() {
-                return Err(ConfigValidationError::InvalidPath {
-                    field: "plugins.strategy_dir".to_string(),
-                    path: path.display().to_string(),
-                });
-            }
+        if let Some(ref path) = self.plugins.strategy_dir
+            && !path.exists()
+        {
+            return Err(ConfigValidationError::InvalidPath {
+                field: "plugins.strategy_dir".to_string(),
+                path: path.display().to_string(),
+            });
         }
 
-        if let Some(ref path) = self.plugins.adapter_dir {
-            if !path.exists() {
-                return Err(ConfigValidationError::InvalidPath {
-                    field: "plugins.adapter_dir".to_string(),
-                    path: path.display().to_string(),
-                });
-            }
+        if let Some(ref path) = self.plugins.adapter_dir
+            && !path.exists()
+        {
+            return Err(ConfigValidationError::InvalidPath {
+                field: "plugins.adapter_dir".to_string(),
+                path: path.display().to_string(),
+            });
         }
 
         Ok(())

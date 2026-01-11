@@ -285,7 +285,7 @@ impl DataService for DefaultDataService {
         self.aggregator.process_tick(&tick).await;
 
         // Notify subscribers
-        self.subscription_manager.notify_tick(&tick).await;
+        self.subscription_manager.notify_tick(&tick);
 
         Ok(())
     }
@@ -298,7 +298,7 @@ impl DataService for DefaultDataService {
         self.aggregator.store_kline(&kline).await;
 
         // Notify subscribers
-        self.subscription_manager.notify_kline(&kline).await;
+        self.subscription_manager.notify_kline(&kline);
 
         Ok(())
     }
@@ -311,14 +311,13 @@ impl DataService for DefaultDataService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use zephyr_core::types::{Amount, Price, Quantity};
 
     fn create_test_tick() -> TickData {
         TickData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .price(Price::new(dec!(42000)).unwrap())
             .volume(Quantity::new(dec!(0.5)).unwrap())
             .bid_price(Price::new(dec!(41999)).unwrap())
@@ -332,7 +331,7 @@ mod tests {
     fn create_test_kline() -> KlineData {
         KlineData::builder()
             .symbol(Symbol::new("BTC-USDT").unwrap())
-            .timestamp(Timestamp::new(1704067200000).unwrap())
+            .timestamp(Timestamp::new(1_704_067_200_000).unwrap())
             .period(KlinePeriod::Hour1)
             .open(Price::new(dec!(42000)).unwrap())
             .high(Price::new(dec!(42500)).unwrap())

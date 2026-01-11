@@ -20,21 +20,15 @@ impl BitgetMarket {
     /// Returns the WebSocket base URL for this market.
     #[must_use]
     pub const fn ws_base_url(&self) -> &'static str {
-        match self {
-            Self::Spot => "wss://ws.bitget.com/v2/ws/public",
-            Self::UsdtFutures => "wss://ws.bitget.com/v2/ws/public",
-            Self::CoinFutures => "wss://ws.bitget.com/v2/ws/public",
-        }
+        // All markets use the same WebSocket URL
+        "wss://ws.bitget.com/v2/ws/public"
     }
 
     /// Returns the private WebSocket base URL.
     #[must_use]
     pub const fn ws_private_url(&self) -> &'static str {
-        match self {
-            Self::Spot => "wss://ws.bitget.com/v2/ws/private",
-            Self::UsdtFutures => "wss://ws.bitget.com/v2/ws/private",
-            Self::CoinFutures => "wss://ws.bitget.com/v2/ws/private",
-        }
+        // All markets use the same private WebSocket URL
+        "wss://ws.bitget.com/v2/ws/private"
     }
 
     /// Returns the REST API base URL.
@@ -46,11 +40,8 @@ impl BitgetMarket {
     /// Returns the testnet WebSocket base URL.
     #[must_use]
     pub const fn testnet_ws_base_url(&self) -> &'static str {
-        match self {
-            Self::Spot => "wss://ws.bitget.com/v2/ws/public",
-            Self::UsdtFutures => "wss://ws.bitget.com/v2/ws/public",
-            Self::CoinFutures => "wss://ws.bitget.com/v2/ws/public",
-        }
+        // All markets use the same testnet WebSocket URL
+        "wss://ws.bitget.com/v2/ws/public"
     }
 
     /// Returns the testnet REST API base URL.
@@ -508,9 +499,9 @@ pub struct BitgetPosition {
     pub available: String,
     /// Average price
     pub average_open_price: String,
-    /// Unrealized PnL
+    /// Unrealized `PnL`
     pub unrealized_pl: String,
-    /// Realized PnL
+    /// Realized `PnL`
     #[serde(default)]
     pub realized_pl: Option<String>,
     /// Leverage
@@ -552,7 +543,7 @@ pub struct BitgetBalance {
     /// Equity
     #[serde(default)]
     pub equity: Option<String>,
-    /// Unrealized PnL
+    /// Unrealized `PnL`
     #[serde(default)]
     pub upl: Option<String>,
 }
@@ -586,7 +577,7 @@ pub struct BitgetAccount {
     /// BTC equity
     #[serde(default)]
     pub btc_equity: Option<String>,
-    /// Unrealized PnL
+    /// Unrealized `PnL`
     #[serde(default)]
     pub unrealized_pl: Option<String>,
 }
@@ -654,7 +645,7 @@ mod tests {
             "lastPr": "42000.00",
             "askPr": "42001.00",
             "bidPr": "41999.00",
-            "ts": "1672515782136"
+            "ts": "1_672_515_782_136"
         }"#;
 
         let ticker: BitgetTicker = serde_json::from_str(json).unwrap();
@@ -666,11 +657,11 @@ mod tests {
     fn test_trade_deserialize() {
         let json = r#"{
             "instId": "BTCUSDT",
-            "tradeId": "123456789",
+            "tradeId": "123_456_789",
             "price": "42000.00",
             "size": "0.001",
             "side": "buy",
-            "ts": "1672515782136"
+            "ts": "1_672_515_782_136"
         }"#;
 
         let trade: BitgetTrade = serde_json::from_str(json).unwrap();

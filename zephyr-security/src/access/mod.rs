@@ -484,8 +484,10 @@ mod tests {
         assert!(ac.check_ip_allowed(ip).is_ok());
 
         let other_ip: IpAddr = "10.0.0.1".parse().unwrap();
-        let mut config = AccessControlConfig::default();
-        config.enforce_ip_whitelist = true;
+        let config = AccessControlConfig {
+            enforce_ip_whitelist: true,
+            ..Default::default()
+        };
         let ac_strict = AccessControl::with_config(config);
         ac_strict.add_ip_whitelist(ip);
         assert!(ac_strict.check_ip_allowed(other_ip).is_err());

@@ -42,6 +42,7 @@ impl AuthenticatedUser {
 
 /// Authentication layer for protecting routes.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AuthLayer {
     jwt_manager: Arc<JwtManager>,
 }

@@ -7,6 +7,9 @@
 
 #![allow(clippy::disallowed_types)]
 #![allow(clippy::branches_sharing_code)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
 
 use std::collections::HashMap;
 

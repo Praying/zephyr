@@ -780,7 +780,7 @@ mod tests {
             low24h: None,
             base_volume: None,
             quote_volume: None,
-            ts: "1_672_515_782_136".to_string(),
+            ts: "1672515782136".to_string(),
             open_utc: None,
             change_utc24h: None,
         };
@@ -795,11 +795,11 @@ mod tests {
         let parser = BitgetParser::new();
         let trade = BitgetTrade {
             inst_id: "BTCUSDT".to_string(),
-            trade_id: "123_456_789".to_string(),
+            trade_id: "123456789".to_string(),
             price: "42000.00".to_string(),
             size: "0.001".to_string(),
             side: "buy".to_string(),
-            ts: "1_672_515_782_136".to_string(),
+            ts: "1672515782136".to_string(),
         };
 
         let tick = parser.parse_trade(&trade).unwrap();
@@ -836,7 +836,7 @@ mod tests {
         let mark = BitgetMarkPrice {
             inst_id: "BTCUSDT".to_string(),
             mark_price: "42000.00".to_string(),
-            ts: "1_672_515_782_136".to_string(),
+            ts: "1672515782136".to_string(),
         };
 
         let tick = parser.parse_mark_price(&mark).unwrap();

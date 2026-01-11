@@ -661,7 +661,7 @@ mod tests {
             "px": "42000.0",
             "sz": "0.1",
             "hash": "0x123",
-            "time": 1_672_515_782_136,
+            "time": 1672515782136,
             "tid": 12345
         }"#;
 
@@ -693,7 +693,7 @@ mod tests {
         }"#;
 
         let candle: HyperliquidCandle = serde_json::from_str(json).unwrap();
-        assert_eq!(candle.timestamp, 1_672_515_780_000);
+        assert_eq!(candle.timestamp, 1672515780000);
         assert_eq!(candle.open, "42000.0");
         assert_eq!(candle.close, "42050.0");
     }

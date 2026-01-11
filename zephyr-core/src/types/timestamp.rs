@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_timestamp_display() {
         let ts = Timestamp::new(1_704_067_200_000).unwrap();
-        assert_eq!(format!("{ts}"), "1_704_067_200_000");
+        assert_eq!(format!("{ts}"), "1704067200000");
     }
 
     #[test]

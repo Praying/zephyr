@@ -136,6 +136,12 @@ mod tests {
     fn test_klines_conversion() {
         pyo3::prepare_freethreaded_python();
         Python::with_gil(|py| {
+            // Check if numpy is available
+            if py.import("numpy").is_err() {
+                println!("Skipping test: numpy not installed");
+                return;
+            }
+
             let klines = vec![
                 create_test_kline(42000.0),
                 create_test_kline(42100.0),

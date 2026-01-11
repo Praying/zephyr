@@ -17,10 +17,9 @@ fn main() {
         println!("cargo:rustc-link-lib=python3.13");
     }
 
-    // On Linux, link to Python library
+    // On Linux (GitHub Actions), link to Python library
     if target_os == "linux" {
-        // Add library search path for Python
-        println!("cargo:rustc-link-search=/usr/lib");
-        println!("cargo:rustc-link-lib=python3.13");
+        // Link to python3-dev library
+        println!("cargo:rustc-link-lib=python3.10");
     }
 }

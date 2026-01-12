@@ -63,7 +63,7 @@ metrics = "0.24"
 metrics-exporter-prometheus = "0.18"
 
 # Cryptography and security
-ring = "=0.17.13"
+ring = "=0.17.14"
 argon2 = "0.5"
 zeroize = { version = "1.8", features = ["derive"] }
 jsonwebtoken = "9.3"

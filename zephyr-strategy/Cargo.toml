@@ -1,0 +1,54 @@
+[package]
+name = "zephyr-strategy"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Strategy loading and execution framework for Zephyr trading system"
+
+[features]
+default = []
+# Enable Python strategy support via PyO3
+python = ["dep:pyo3"]
+# Enable hot reload support for Python strategies
+hot-reload = ["dep:notify", "dep:notify-debouncer-mini"]
+
+[dependencies]
+zephyr-core = { path = "../zephyr-core" }
+
+# Core dependencies
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+# Async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Logging and tracing
+tracing.workspace = true
+
+# Strategy registration
+inventory.workspace = true
+
+# Python bindings (optional)
+pyo3 = { workspace = true, features = ["abi3-py310"], optional = true }
+
+# File watching for hot reload (optional)
+notify = { workspace = true, optional = true }
+notify-debouncer-mini = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+rust_decimal_macros.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tempfile = "3.14"
+
+[lints]
+workspace = true

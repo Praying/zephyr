@@ -114,7 +114,7 @@ pub struct HotReloader {
     /// Key is the canonical path to the file
     watched_strategies: Arc<Mutex<HashMap<PathBuf, WatchedStrategy>>>,
 
-    /// The file watcher (created when start() is called)
+    /// The file watcher (created when `start()` is called)
     debouncer: Option<Debouncer<RecommendedWatcher>>,
 
     /// Whether the reloader is currently running
@@ -545,7 +545,7 @@ mod tests {
                 assert!(path.contains("test_strategy.py"));
                 assert_eq!(class_name, "TestStrategy");
             }
-            Ok(Some(other)) => panic!("Unexpected command: {:?}", other),
+            Ok(Some(other)) => panic!("Unexpected command: {other:?}"),
             Ok(None) => panic!("Channel closed"),
             Err(_) => {
                 // Timeout is acceptable in CI environments where file watching may be unreliable

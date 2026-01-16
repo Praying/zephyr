@@ -194,16 +194,16 @@ impl StrategyRunner {
         while let Some(cmd) = self.cmd_rx.recv().await {
             match cmd {
                 RunnerCommand::OnTick(tick) => {
-                    self.handle_tick(&tick).await;
+                    self.handle_tick(&tick);
                 }
                 RunnerCommand::OnBar(bar) => {
-                    self.handle_bar(&bar).await;
+                    self.handle_bar(&bar);
                 }
                 RunnerCommand::OnOrderStatus(status) => {
                     self.handle_order_status(status);
                 }
                 RunnerCommand::Reload { path, class_name } => {
-                    self.handle_reload(&path, &class_name).await;
+                    self.handle_reload(&path, &class_name);
                 }
                 RunnerCommand::Stop => {
                     info!(strategy = %name, "Received stop command");
@@ -221,14 +221,14 @@ impl StrategyRunner {
     }
 
     /// Handles a tick update.
-    async fn handle_tick(&mut self, tick: &crate::types::Tick) {
+    fn handle_tick(&mut self, tick: &crate::types::Tick) {
         if self.disabled {
             return;
         }
 
         let result = if self.is_python {
             // Use spawn_blocking for Python strategies to avoid blocking async runtime
-            self.handle_tick_blocking(tick).await
+            self.handle_tick_blocking(tick)
         } else {
             // Direct call for Rust strategies with panic catching
             self.handle_tick_sync(tick)
@@ -260,8 +260,7 @@ impl StrategyRunner {
     }
 
     /// Handles a tick using `spawn_blocking` (for Python strategies).
-    #[allow(clippy::unused_async)]
-    async fn handle_tick_blocking(&mut self, tick: &crate::types::Tick) -> Result<(), String> {
+    fn handle_tick_blocking(&mut self, tick: &crate::types::Tick) -> Result<(), String> {
         // For Python strategies, we need to use spawn_blocking
         // However, since we can't move self into spawn_blocking easily,
         // we'll still use catch_unwind but note that Python GIL acquisition
@@ -270,8 +269,7 @@ impl StrategyRunner {
     }
 
     /// Handles a bar update.
-    #[allow(clippy::unused_async)]
-    async fn handle_bar(&mut self, bar: &crate::types::Bar) {
+    fn handle_bar(&mut self, bar: &crate::types::Bar) {
         if self.disabled {
             return;
         }
@@ -319,8 +317,7 @@ impl StrategyRunner {
     }
 
     /// Handles a hot reload request (Python strategies only).
-    #[allow(clippy::needless_pass_by_ref_mut, clippy::unused_async)]
-    async fn handle_reload(&mut self, path: &str, class_name: &str) {
+    fn handle_reload(&mut self, path: &str, class_name: &str) {
         if !self.is_python {
             warn!(
                 strategy = %self.strategy.name(),
@@ -331,7 +328,7 @@ impl StrategyRunner {
 
         #[cfg(feature = "python")]
         {
-            self.do_python_reload(path, class_name).await;
+            self.do_python_reload(path, class_name);
         }
 
         #[cfg(not(feature = "python"))]
@@ -347,7 +344,7 @@ impl StrategyRunner {
 
     /// Performs the actual Python strategy reload.
     #[cfg(feature = "python")]
-    async fn do_python_reload(&mut self, path: &str, class_name: &str) {
+    fn do_python_reload(&mut self, path: &str, class_name: &str) {
         let name = self.strategy.name().to_string();
         info!(
             strategy = %name,
@@ -382,7 +379,7 @@ impl StrategyRunner {
             }
         };
 
-        let new_strategy = match loader.reload(path, class_name, self.strategy_config.clone()) {
+        let new_strategy = match loader.reload(path, class_name, &self.strategy_config) {
             Ok(s) => s,
             Err(e) => {
                 error!(
@@ -400,15 +397,8 @@ impl StrategyRunner {
 
         // Step 4: Try to restore state if we extracted it
         if let Some(state) = old_state {
-            if let Err(e) = self.try_restore_python_state(state) {
-                warn!(
-                    strategy = %name,
-                    error = %e,
-                    "Failed to restore state after hot reload, strategy will start fresh"
-                );
-            } else {
-                info!(strategy = %name, "Successfully restored state after hot reload");
-            }
+            let _ = self.try_restore_python_state(state);
+            info!(strategy = %name, "State restoration skipped after hot reload");
         }
 
         // Step 5: Re-initialize the strategy
@@ -469,7 +459,8 @@ impl StrategyRunner {
     ///
     /// Attempts to call `set_state()` first, then falls back to `__dict__` update.
     #[cfg(feature = "python")]
-    fn try_restore_python_state(&mut self, _state: Py<PyAny>) -> Result<(), String> {
+    #[allow(clippy::unnecessary_wraps)]
+    fn try_restore_python_state(&self, _state: Py<PyAny>) -> Result<(), String> {
         if !self.is_python {
             return Ok(());
         }

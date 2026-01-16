@@ -1,4 +1,4 @@
-//! Python strategy loader using PyO3.
+//! Python strategy loader using `PyO3`.
 //!
 //! This module provides the `PythonLoader` struct for loading Python strategies
 //! from script files. It handles Python interpreter initialization, sys.path
@@ -65,7 +65,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{debug, info, warn};
 
 /// Global flag to track if Python interpreter has been initialized.
-/// PyO3 requires that the interpreter is only initialized once per process.
+/// `PyO3` requires that the interpreter is only initialized once per process.
 static PYTHON_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 /// Errors that can occur during Python strategy loading.
@@ -112,7 +112,7 @@ pub enum PythonLoadError {
         message: String,
     },
 
-    /// Missing Python dependency (ImportError)
+    /// Missing Python dependency (`ImportError`)
     #[error("missing Python dependency '{module}': {message}")]
     MissingDependency {
         /// Name of the missing module
@@ -154,7 +154,7 @@ impl From<PyErr> for PythonLoadError {
     }
 }
 
-/// Extracts the module name from an ImportError message.
+/// Extracts the module name from an `ImportError` message.
 fn extract_module_from_import_error(err_str: &str) -> String {
     // Common patterns:
     // "No module named 'foo'"
@@ -237,7 +237,7 @@ impl PythonLoader {
     /// ```
     pub fn new(config: &PythonConfig) -> Result<Self, PythonLoadError> {
         // Initialize Python interpreter if not already done
-        Self::ensure_python_initialized()?;
+        Self::ensure_python_initialized();
 
         // Configure sys.path
         let python_paths = Self::configure_sys_path(config)?;
@@ -254,7 +254,7 @@ impl PythonLoader {
     }
 
     /// Ensures the Python interpreter is initialized.
-    fn ensure_python_initialized() -> Result<(), PythonLoadError> {
+    fn ensure_python_initialized() {
         // Only initialize once
         if PYTHON_INITIALIZED
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -263,7 +263,6 @@ impl PythonLoader {
             debug!("Initializing Python interpreter");
             pyo3::prepare_freethreaded_python();
         }
-        Ok(())
     }
 
     /// Configures sys.path with user-specified directories.
@@ -355,12 +354,12 @@ impl PythonLoader {
         &self,
         path: &str,
         class_name: &str,
-        config: serde_json::Value,
+        config: &serde_json::Value,
     ) -> Result<Box<dyn Strategy>, PythonLoadError> {
         let script_path = Path::new(path);
         let script_dir = script_path
             .parent()
-            .unwrap_or(Path::new("."))
+            .unwrap_or_else(|| Path::new("."))
             .to_string_lossy()
             .to_string();
 
@@ -402,10 +401,10 @@ impl PythonLoader {
             // Generate a unique module name to avoid conflicts
             let module_name = format!(
                 "zephyr_user_strategy_{}",
-                script_path
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "unknown".to_string())
+                Path::new(path).file_stem().map_or_else(
+                    || "unknown".to_string(),
+                    |s| s.to_string_lossy().to_string()
+                )
             );
 
             // Convert strings to CString for PyModule::from_code
@@ -499,7 +498,7 @@ impl PythonLoader {
         &self,
         path: &str,
         class_name: &str,
-        config: serde_json::Value,
+        config: &serde_json::Value,
     ) -> Result<Box<dyn Strategy>, PythonLoadError> {
         debug!(path = %path, class = %class_name, "Reloading Python strategy");
 
@@ -511,10 +510,10 @@ impl PythonLoader {
 
             let module_name = format!(
                 "zephyr_user_strategy_{}",
-                Path::new(path)
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "unknown".to_string())
+                Path::new(path).file_stem().map_or_else(
+                    || "unknown".to_string(),
+                    |s| s.to_string_lossy().to_string()
+                )
             );
 
             // Remove the module if it exists (ignore errors)
@@ -561,16 +560,16 @@ fn find_site_packages(venv_dir: &Path) -> Option<std::path::PathBuf> {
 
     // Try to find any python3.x directory
     let lib_dir = venv_dir.join("lib");
-    if lib_dir.exists() {
-        if let Ok(entries) = std::fs::read_dir(&lib_dir) {
-            for entry in entries.flatten() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if name_str.starts_with("python3.") {
-                    let site_packages = entry.path().join("site-packages");
-                    if site_packages.exists() {
-                        return Some(site_packages);
-                    }
+    if lib_dir.exists()
+        && let Ok(entries) = std::fs::read_dir(&lib_dir)
+    {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.starts_with("python3.") {
+                let site_packages = entry.path().join("site-packages");
+                if site_packages.exists() {
+                    return Some(site_packages);
                 }
             }
         }

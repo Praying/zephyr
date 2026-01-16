@@ -1,6 +1,6 @@
 //! Python bindings for strategy context and market data types.
 //!
-//! This module provides PyO3 classes that wrap Rust types for use in Python strategies:
+//! This module provides `PyO3` classes that wrap Rust types for use in Python strategies:
 //! - `PyContextWrapper`: Wraps `StrategyContext` for Python access
 //! - `PyTick`: Wraps `TickData` for Python access
 //! - `PyBar`: Wraps `KlineData` for Python access
@@ -46,8 +46,8 @@ use zephyr_core::types::{OrderId, Symbol};
 /// ```
 #[pyclass(name = "StrategyContext", unsendable)]
 pub struct PyContextWrapper {
-    /// Pointer to the underlying StrategyContext
-    /// SAFETY: This is only valid during the lifetime of the on_tick/on_bar call
+    /// Pointer to the underlying `StrategyContext`
+    /// SAFETY: This is only valid during the lifetime of the `on_tick/on_bar` call
     ctx_ptr: *mut StrategyContext,
 }
 
@@ -63,7 +63,7 @@ impl PyContextWrapper {
     #[must_use]
     pub fn new(ctx: &mut StrategyContext) -> Self {
         Self {
-            ctx_ptr: ctx as *mut StrategyContext,
+            ctx_ptr: std::ptr::from_mut::<StrategyContext>(ctx),
         }
     }
 
@@ -71,13 +71,15 @@ impl PyContextWrapper {
     ///
     /// # Safety
     ///
-    /// This is only safe to call during the lifetime of the on_tick/on_bar callback.
+    /// This is only safe to call during the lifetime of the `on_tick/on_bar` callback.
+    #[allow(unsafe_code)]
     fn ctx_mut(&mut self) -> &mut StrategyContext {
         // SAFETY: The pointer is valid during the callback lifetime
         unsafe { &mut *self.ctx_ptr }
     }
 
     /// Gets an immutable reference to the underlying context.
+    #[allow(unsafe_code)]
     fn ctx(&self) -> &StrategyContext {
         // SAFETY: The pointer is valid during the callback lifetime
         unsafe { &*self.ctx_ptr }
@@ -101,7 +103,7 @@ impl PyContextWrapper {
     ///     dict: Portfolio state with keys:
     ///         - cash: Available cash balance
     ///         - equity: Total equity
-    ///         - margin_used: Margin currently in use
+    ///         - `margin_used`: Margin currently in use
     ///         - positions: Dict of symbol -> position info
     fn portfolio(&self) -> PyResult<HashMap<String, PyObject>> {
         Python::with_gil(|py| {
@@ -170,14 +172,14 @@ impl PyContextWrapper {
     ///
     /// Args:
     ///     symbol: Trading pair symbol (e.g., "BTC-USDT")
-    ///     target_qty: Target position quantity (positive = long, negative = short)
+    ///     `target_qty`: Target position quantity (positive = long, negative = short)
     ///     urgency: How urgently to reach the target ("high", "medium", "low")
     ///
     /// Returns:
     ///     int: Signal ID for tracking
     ///
     /// Raises:
-    ///     ValueError: If the signal channel is full or closed
+    ///     `ValueError`: If the signal channel is full or closed
     #[pyo3(signature = (symbol, target_qty, urgency = "medium"))]
     fn emit_target_position(
         &mut self,
@@ -206,7 +208,7 @@ impl PyContextWrapper {
     ///     side: Order side ("buy" or "sell")
     ///     price: Limit price
     ///     qty: Order quantity
-    ///     time_in_force: Time in force ("gtc", "ioc", "fok")
+    ///     `time_in_force`: Time in force ("gtc", "ioc", "fok")
     ///
     /// Returns:
     ///     int: Signal ID for tracking
@@ -270,7 +272,7 @@ impl PyContextWrapper {
     /// Cancels a specific order.
     ///
     /// Args:
-    ///     order_id: The order ID to cancel
+    ///     `order_id`: The order ID to cancel
     ///
     /// Returns:
     ///     int: Signal ID for tracking
@@ -342,10 +344,7 @@ fn parse_urgency(s: &str) -> PyResult<Urgency> {
         "high" => Ok(Urgency::High),
         "medium" => Ok(Urgency::Medium),
         "low" => Ok(Urgency::Low),
-        _ => Err(PyValueError::new_err(format!(
-            "Invalid urgency '{}', expected 'high', 'medium', or 'low'",
-            s
-        ))),
+        _ => Err(PyValueError::new_err(format!("Invalid urgency '{s}'"))),
     }
 }
 
@@ -354,10 +353,7 @@ fn parse_side(s: &str) -> PyResult<OrderSide> {
     match s.to_lowercase().as_str() {
         "buy" => Ok(OrderSide::Buy),
         "sell" => Ok(OrderSide::Sell),
-        _ => Err(PyValueError::new_err(format!(
-            "Invalid side '{}', expected 'buy' or 'sell'",
-            s
-        ))),
+        _ => Err(PyValueError::new_err(format!("Invalid side '{s}'"))),
     }
 }
 
@@ -368,8 +364,7 @@ fn parse_time_in_force(s: &str) -> PyResult<TimeInForce> {
         "ioc" => Ok(TimeInForce::Ioc),
         "fok" => Ok(TimeInForce::Fok),
         _ => Err(PyValueError::new_err(format!(
-            "Invalid time_in_force '{}', expected 'gtc', 'ioc', or 'fok'",
-            s
+            "Invalid time_in_force '{s}'"
         ))),
     }
 }
@@ -416,7 +411,7 @@ pub struct PyTick {
 
 #[pymethods]
 impl PyTick {
-    /// Creates a new PyTick instance.
+    /// Creates a new `PyTick` instance.
     #[new]
     #[pyo3(signature = (symbol, timestamp, price, volume, best_bid = None, best_ask = None))]
     fn new(
@@ -519,7 +514,7 @@ pub struct PyBar {
 
 #[pymethods]
 impl PyBar {
-    /// Creates a new PyBar instance.
+    /// Creates a new `PyBar` instance.
     #[new]
     #[pyo3(signature = (symbol, timestamp, period, open, high, low, close, volume, turnover = 0.0))]
     #[allow(clippy::too_many_arguments)]
@@ -626,14 +621,14 @@ mod tests {
     fn test_py_tick_new() {
         let tick = PyTick::new(
             "BTC-USDT".to_string(),
-            1704067200000,
-            42000.0,
+            1_704_067_200_000,
+            42_000.0,
             1.5,
-            Some(41999.0),
-            Some(42001.0),
+            Some(41_999.0),
+            Some(42_001.0),
         );
         assert_eq!(tick.symbol, "BTC-USDT");
-        assert_eq!(tick.price, 42000.0);
+        assert!((tick.price - 42_000.0).abs() < f64::EPSILON);
         assert_eq!(tick.spread, Some(2.0));
     }
 
@@ -641,19 +636,19 @@ mod tests {
     fn test_py_bar_new() {
         let bar = PyBar::new(
             "BTC-USDT".to_string(),
-            1704067200000,
+            1_704_067_200_000,
             "1h".to_string(),
-            42000.0,
-            42500.0,
-            41800.0,
-            42300.0,
+            42_000.0,
+            42_500.0,
+            41_800.0,
+            42_300.0,
             100.0,
-            4200000.0,
+            4_200_000.0,
         );
         assert_eq!(bar.symbol, "BTC-USDT");
         assert!(bar.is_bullish());
         assert!(!bar.is_bearish());
-        assert_eq!(bar.range(), 700.0);
-        assert_eq!(bar.body(), 300.0);
+        assert!((bar.range() - 700.0).abs() < f64::EPSILON);
+        assert!((bar.body() - 300.0).abs() < f64::EPSILON);
     }
 }

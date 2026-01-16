@@ -1,4 +1,4 @@
-//! Python strategy adapter using PyO3.
+//! Python strategy adapter using `PyO3`.
 //!
 //! This module provides the `PyStrategyAdapter` struct that wraps a Python strategy
 //! object and implements the Rust `Strategy` trait, enabling Python strategies to
@@ -7,7 +7,7 @@
 //! # Architecture
 //!
 //! The adapter delegates all strategy method calls to the underlying Python object
-//! via PyO3. Each call acquires the GIL (Global Interpreter Lock) to safely interact
+//! via `PyO3`. Each call acquires the GIL (Global Interpreter Lock) to safely interact
 //! with the Python interpreter.
 //!
 //! # Error Handling
@@ -35,7 +35,7 @@ use zephyr_core::types::Symbol;
 ///
 /// # Thread Safety
 ///
-/// The adapter is `Send + Sync` because PyO3's `Py<PyAny>` is thread-safe.
+/// The adapter is `Send + Sync` because `PyO3`'s `Py<PyAny>` is thread-safe.
 /// All Python interactions acquire the GIL, ensuring safe concurrent access.
 ///
 /// # Hot Reload Support
@@ -133,6 +133,7 @@ impl PyStrategyAdapter {
     /// 1. Try calling `get_state()` method if defined
     /// 2. Fall back to copying `__dict__` (excluding non-picklable objects)
     /// 3. Return `None` if both fail
+    #[must_use]
     pub fn extract_state(&self) -> Option<Py<PyAny>> {
         Python::with_gil(|py| {
             let instance = self.py_instance.bind(py);
@@ -203,7 +204,7 @@ impl PyStrategyAdapter {
     /// # Returns
     ///
     /// `Ok(())` if state was restored successfully, `Err` with description otherwise.
-    pub fn restore_state(&mut self, state: Py<PyAny>) -> Result<(), String> {
+    pub fn restore_state(&mut self, state: &Py<PyAny>) -> Result<(), String> {
         Python::with_gil(|py| {
             let instance = self.py_instance.bind(py);
             let state_bound = state.bind(py);
@@ -268,7 +269,7 @@ impl PyStrategyAdapter {
 /// Returns an error if:
 /// - The Python method doesn't exist
 /// - The return value is not a list
-/// - Individual items are not valid (symbol, data_type) tuples
+/// - Individual items are not valid (symbol, `data_type`) tuples
 pub fn extract_subscriptions(
     _py: Python<'_>,
     instance: &Bound<'_, PyAny>,
@@ -289,10 +290,7 @@ pub fn extract_subscriptions(
     for item in list.iter() {
         // Each item should be a tuple (symbol, data_type)
         let tuple: Vec<String> = item.extract().map_err(|e| {
-            anyhow!(
-                "Invalid subscription format, expected (symbol, data_type) tuple: {}",
-                e
-            )
+            anyhow!("Invalid subscription format, expected (symbol, data_type) tuple: {e}")
         })?;
 
         if tuple.len() != 2 {
@@ -332,17 +330,19 @@ fn parse_data_type(s: &str) -> Result<DataType> {
                 "4h" => Timeframe::H4,
                 "1d" => Timeframe::D1,
                 "1w" => Timeframe::W1,
-                _ => return Err(anyhow!("Unknown timeframe: {}", tf_str)),
+                _ => return Err(anyhow!("Unknown timeframe: {tf_str}")),
             };
             Ok(DataType::Bar(timeframe))
         }
-        _ => Err(anyhow!("Unknown data type: {}", s)),
+        _ => Err(anyhow!("Unknown data type: {s}")),
     }
 }
 
 // SAFETY: PyO3's Py<T> is Send + Sync when T: Send
 // The GIL ensures safe access to Python objects
+#[allow(unsafe_code)]
 unsafe impl Send for PyStrategyAdapter {}
+#[allow(unsafe_code)]
 unsafe impl Sync for PyStrategyAdapter {}
 
 impl Strategy for PyStrategyAdapter {
@@ -370,7 +370,7 @@ impl Strategy for PyStrategyAdapter {
                 .call_method1(py, "on_init", (py_ctx,))
                 .map_err(|e| {
                     error!(strategy = %self.name, error = %e, "Python on_init error");
-                    anyhow!("Python on_init error: {}", e)
+                    anyhow!("Python on_init error: {e}")
                 })?;
 
             Ok(())
@@ -446,7 +446,7 @@ impl Strategy for PyStrategyAdapter {
             // Check if on_order_status method exists
             let instance = self.py_instance.bind(py);
             if instance.hasattr("on_order_status").unwrap_or(false) {
-                let py_status = create_py_order_status(py, status);
+                let py_status = create_py_order_status(py, *status);
 
                 // Create PyContextWrapper with mutable access
                 let py_ctx = PyContextWrapper::new(ctx);
@@ -485,7 +485,7 @@ impl Strategy for PyStrategyAdapter {
                 .call_method1(py, "on_stop", (py_ctx_obj,))
                 .map_err(|e| {
                     error!(strategy = %self.name, error = %e, "Python on_stop error");
-                    anyhow!("Python on_stop error: {}", e)
+                    anyhow!("Python on_stop error: {e}")
                 })?;
 
             Ok(())
@@ -494,7 +494,7 @@ impl Strategy for PyStrategyAdapter {
 }
 
 /// Creates a Python dictionary representing a Tick.
-/// Kept for backward compatibility - prefer using PyTick directly.
+/// Kept for backward compatibility - prefer using `PyTick` directly.
 #[allow(dead_code)]
 fn create_py_tick<'py>(py: Python<'py>, tick: &Tick) -> Result<Bound<'py, PyDict>> {
     let dict = PyDict::new(py);
@@ -518,7 +518,7 @@ fn create_py_tick<'py>(py: Python<'py>, tick: &Tick) -> Result<Bound<'py, PyDict
 }
 
 /// Creates a Python dictionary representing a Bar.
-/// Kept for backward compatibility - prefer using PyBar directly.
+/// Kept for backward compatibility - prefer using `PyBar` directly.
 #[allow(dead_code)]
 fn create_py_bar<'py>(py: Python<'py>, bar: &Bar) -> Result<Bound<'py, PyDict>> {
     let dict = PyDict::new(py);
@@ -533,8 +533,8 @@ fn create_py_bar<'py>(py: Python<'py>, bar: &Bar) -> Result<Bound<'py, PyDict>> 
     Ok(dict)
 }
 
-/// Creates a Python string representing an OrderStatus enum.
-fn create_py_order_status<'py>(py: Python<'py>, status: &OrderStatus) -> Bound<'py, PyAny> {
+/// Creates a Python string representing an `OrderStatus` enum.
+fn create_py_order_status(py: Python<'_>, status: OrderStatus) -> Bound<'_, PyAny> {
     // OrderStatus is an enum, so we just convert it to a string
     let status_str = format!("{status:?}");
     status_str
@@ -543,8 +543,8 @@ fn create_py_order_status<'py>(py: Python<'py>, status: &OrderStatus) -> Bound<'
         .into_any()
 }
 
-/// Creates a Python dictionary representing a read-only StrategyContext.
-/// Used for on_init where we only have an immutable reference.
+/// Creates a Python dictionary representing a read-only `StrategyContext`.
+/// Used for `on_init` where we only have an immutable reference.
 fn create_py_context_readonly<'py>(
     py: Python<'py>,
     ctx: &StrategyContext,
@@ -577,12 +577,12 @@ fn create_py_context_readonly<'py>(
     Ok(dict)
 }
 
-/// Creates a Python dictionary representing a mutable StrategyContext.
-/// Kept for backward compatibility - prefer using PyContextWrapper directly.
+/// Creates a Python dictionary representing a mutable `StrategyContext`.
+/// Kept for backward compatibility - prefer using `PyContextWrapper` directly.
 #[allow(dead_code)]
 fn create_py_context_mut<'py>(
     py: Python<'py>,
-    ctx: &mut StrategyContext,
+    ctx: &StrategyContext,
 ) -> Result<Bound<'py, PyDict>> {
     create_py_context_readonly(py, ctx)
 }

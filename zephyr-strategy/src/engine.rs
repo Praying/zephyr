@@ -39,7 +39,7 @@
 //!
 //! // Create and start engine
 //! let engine = StrategyEngine::new(config)?;
-//! let handle = engine.start().await?;
+//! let handle = engine.start()?;
 //!
 //! // Broadcast market data
 //! handle.broadcast_tick(tick).await?;
@@ -151,6 +151,7 @@ pub struct EngineHandle {
     runner_handles: Vec<(String, JoinHandle<()>)>,
     /// Hot reloader (if enabled)
     #[cfg(feature = "hot-reload")]
+    #[allow(dead_code)]
     hot_reloader: Option<HotReloader>,
 }
 
@@ -345,7 +346,7 @@ impl EngineHandle {
 /// # Lifecycle
 ///
 /// 1. Create engine with `StrategyEngine::new(config)`
-/// 2. Start engine with `engine.start().await`
+/// 2. Start engine with `engine.start()`
 /// 3. Use the returned `EngineHandle` to broadcast data and receive signals
 /// 4. Shutdown with `handle.shutdown().await`
 pub struct StrategyEngine {
@@ -505,8 +506,7 @@ impl StrategyEngine {
     /// Returns an error if:
     /// - Strategies fail to load
     /// - Engine is already running
-    #[allow(clippy::unused_async)]
-    pub async fn start(mut self) -> Result<EngineHandle, EngineError> {
+    pub fn start(mut self) -> Result<EngineHandle, EngineError> {
         // Load strategies if not already loaded
         if self.strategies.is_empty() {
             self.load_strategies()?;
@@ -935,7 +935,7 @@ mod tests {
 
         // Create and start the engine
         let engine = StrategyEngine::new(config).unwrap();
-        let handle = engine.start().await.unwrap();
+        let handle = engine.start().unwrap();
 
         // Verify the strategy is running
         assert_eq!(handle.strategy_count(), 1);
@@ -980,7 +980,7 @@ mod tests {
 
         // Create and start the engine
         let engine = StrategyEngine::new(config).unwrap();
-        let handle = engine.start().await.unwrap();
+        let handle = engine.start().unwrap();
 
         // Verify both strategies are running
         assert_eq!(handle.strategy_count(), 2);
@@ -1023,7 +1023,7 @@ mod tests {
         assert!(!infos[0].subscriptions.is_empty());
 
         // Start the engine
-        let handle = engine.start().await.unwrap();
+        let handle = engine.start().unwrap();
         assert_eq!(handle.strategy_count(), 1);
 
         // Shutdown

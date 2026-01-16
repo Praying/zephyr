@@ -112,7 +112,7 @@ fn load_rust_strategy_from_config(config: &StrategyConfig) -> Result<Box<dyn Str
         } else {
             LoadError::BuildError {
                 name: config.name.clone(),
-                source: e,
+                source: anyhow::anyhow!("{e}"),
             }
         }
     })
@@ -140,7 +140,7 @@ fn load_python_strategy_from_config(
     let loader =
         PythonLoader::new(&PythonConfig::default()).map_err(|e| LoadError::BuildError {
             name: config.name.clone(),
-            source: anyhow::anyhow!("{}", e),
+            source: anyhow::anyhow!("{e}"),
         })?;
 
     // Load the strategy
@@ -148,7 +148,7 @@ fn load_python_strategy_from_config(
         .load(
             path.to_string_lossy().as_ref(),
             &config.class,
-            config.params.clone(),
+            &config.params,
         )
         .map_err(|e| {
             let err_str = e.to_string();
@@ -160,7 +160,7 @@ fn load_python_strategy_from_config(
             } else {
                 LoadError::BuildError {
                     name: config.name.clone(),
-                    source: anyhow::anyhow!("{}", e),
+                    source: anyhow::anyhow!("{e}"),
                 }
             }
         })
@@ -246,7 +246,7 @@ pub fn load_python_strategy_with_config(
     // Create a Python loader with the provided config
     let loader = PythonLoader::new(python_config).map_err(|e| LoadError::BuildError {
         name: config.name.clone(),
-        source: anyhow::anyhow!("{}", e),
+        source: anyhow::anyhow!("{e}"),
     })?;
 
     // Load the strategy
@@ -254,7 +254,7 @@ pub fn load_python_strategy_with_config(
         .load(
             path.to_string_lossy().as_ref(),
             &config.class,
-            config.params.clone(),
+            &config.params,
         )
         .map_err(|e| {
             let err_str = e.to_string();
@@ -266,7 +266,7 @@ pub fn load_python_strategy_with_config(
             } else {
                 LoadError::BuildError {
                     name: config.name.clone(),
-                    source: anyhow::anyhow!("{}", e),
+                    source: anyhow::anyhow!("{e}"),
                 }
             }
         })

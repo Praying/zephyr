@@ -45,7 +45,7 @@ dashmap.workspace = true
 rust_decimal.workspace = true
 
 # WebSocket
-tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.28", features = ["native-tls"] }
 flate2 = "1.0"
 
 [dev-dependencies]

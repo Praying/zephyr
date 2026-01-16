@@ -109,7 +109,7 @@ impl SubscriptionRouter {
             .await
     }
 
-    /// Routes a tick to all subscribed strategies (sync version using try_send).
+    /// Routes a tick to all subscribed strategies (sync version using `try_send`).
     ///
     /// This is useful when you need to route data without awaiting.
     ///
@@ -169,7 +169,7 @@ impl SubscriptionRouter {
             .await
     }
 
-    /// Routes a bar to all subscribed strategies (sync version using try_send).
+    /// Routes a bar to all subscribed strategies (sync version using `try_send`).
     ///
     /// # Arguments
     ///
@@ -276,7 +276,8 @@ impl SubscriptionRouter {
         sent_count
     }
 
-    /// Sends a command to multiple strategies (sync version using try_send).
+    /// Sends a command to multiple strategies (sync version using `try_send`).
+    #[allow(clippy::needless_pass_by_value)]
     fn send_to_strategies_sync(
         &self,
         strategy_names: &[String],
@@ -428,7 +429,7 @@ mod tests {
 
         let (tx, mut rx) = mpsc::channel(10);
         router.add_runner("strategy1".to_string(), tx);
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
 
         let tick = create_test_tick(btc_symbol());
         let count = router.route_tick(&tick, &manager).await;
@@ -451,8 +452,8 @@ mod tests {
         router.add_runner("strategy1".to_string(), tx1);
         router.add_runner("strategy2".to_string(), tx2);
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy2", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy2", &btc_symbol(), DataType::Tick);
 
         let tick = create_test_tick(btc_symbol());
         let count = router.route_tick(&tick, &manager).await;
@@ -476,8 +477,8 @@ mod tests {
         router.add_runner("strategy2".to_string(), tx2);
 
         // strategy1 subscribes to BTC, strategy2 subscribes to ETH
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy2", eth_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy2", &eth_symbol(), DataType::Tick);
 
         // Send BTC tick
         let btc_tick = create_test_tick(btc_symbol());
@@ -497,7 +498,7 @@ mod tests {
 
         let (tx, mut rx) = mpsc::channel(10);
         router.add_runner("strategy1".to_string(), tx);
-        manager.subscribe("strategy1", btc_symbol(), DataType::Bar(Timeframe::H1));
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Bar(Timeframe::H1));
 
         let bar = create_test_bar(btc_symbol());
         let count = router
@@ -522,8 +523,8 @@ mod tests {
         router.add_runner("strategy2".to_string(), tx2);
 
         // strategy1 subscribes to H1, strategy2 subscribes to D1
-        manager.subscribe("strategy1", btc_symbol(), DataType::Bar(Timeframe::H1));
-        manager.subscribe("strategy2", btc_symbol(), DataType::Bar(Timeframe::D1));
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Bar(Timeframe::H1));
+        manager.subscribe("strategy2", &btc_symbol(), DataType::Bar(Timeframe::D1));
 
         // Send H1 bar
         let bar = create_test_bar(btc_symbol());
@@ -545,7 +546,7 @@ mod tests {
 
         let (tx, mut rx) = mpsc::channel(10);
         router.add_runner("strategy1".to_string(), tx);
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
 
         let tick = create_test_tick(btc_symbol());
         let count = router.route_tick_sync(&tick, &manager);
@@ -559,7 +560,7 @@ mod tests {
         let router = SubscriptionRouter::empty();
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
 
         let is_valid =
             router.validate_subscription("strategy1", &btc_symbol(), DataType::Tick, &manager);
@@ -585,7 +586,7 @@ mod tests {
         let mut manager = SubscriptionManager::new();
 
         // Subscribe a strategy but don't add its runner
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
 
         let tick = create_test_tick(btc_symbol());
         let count = router.route_tick(&tick, &manager).await;

@@ -1,6 +1,6 @@
-//! DualThrust Strategy Implementation.
+//! `DualThrust` Strategy Implementation.
 //!
-//! DualThrust is a classic intraday CTA strategy that uses price range breakouts
+//! `DualThrust` is a classic intraday CTA strategy that uses price range breakouts
 //! to generate trading signals.
 //!
 //! # Strategy Logic
@@ -34,7 +34,7 @@ use tracing::{debug, info, warn};
 use zephyr_core::data::OrderStatus;
 use zephyr_core::types::Symbol;
 
-/// DualThrust strategy configuration parameters.
+/// `DualThrust` strategy configuration parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DualThrustParams {
     /// Strategy instance name
@@ -127,9 +127,8 @@ impl DualThrustParams {
             "M30" | "30M" => Timeframe::M30,
             "H1" | "1H" => Timeframe::H1,
             "H4" | "4H" => Timeframe::H4,
-            "D1" | "1D" => Timeframe::D1,
             "W1" | "1W" => Timeframe::W1,
-            _ => Timeframe::D1, // Default to daily
+            _ => Timeframe::D1, // Default to daily (including "D1" and "1D")
         }
     }
 }
@@ -156,7 +155,7 @@ struct Boundaries {
     range: Decimal,
 }
 
-/// DualThrust trading strategy.
+/// `DualThrust` trading strategy.
 ///
 /// A classic intraday breakout strategy that generates signals based on
 /// price range breakouts from calculated upper and lower boundaries.
@@ -194,7 +193,7 @@ pub struct DualThrust {
 }
 
 impl DualThrust {
-    /// Creates a new DualThrust strategy with the given parameters.
+    /// Creates a new `DualThrust` strategy with the given parameters.
     ///
     /// # Errors
     ///
@@ -286,15 +285,14 @@ impl DualThrust {
             (true, _, _, true, _) => Some(self.params.position_size), // Go long
             (true, _, _, _, true) => Some(-self.params.position_size), // Go short
 
-            // Long position
+            // Long position - hold or reverse
             (_, true, _, true, _) => None, // Hold long
             (_, true, _, _, true) => Some(-self.params.position_size), // Reverse to short
 
-            // Short position
+            // Short position - reverse or hold
             (_, _, true, true, _) => Some(self.params.position_size), // Reverse to long
-            (_, _, true, _, true) => None,                            // Hold short
 
-            // No signal (price in range)
+            // No signal (price in range or holding short)
             _ => None,
         }
     }
@@ -468,7 +466,7 @@ impl Strategy for DualThrust {
     }
 }
 
-/// Builder for creating DualThrust strategies.
+/// Builder for creating `DualThrust` strategies.
 ///
 /// This builder is automatically registered with the strategy registry
 /// using the `inventory` crate.
@@ -491,7 +489,7 @@ impl StrategyBuilder for DualThrustBuilder {
 
     fn build(&self, config: serde_json::Value) -> Result<Box<dyn Strategy>> {
         let params: DualThrustParams = serde_json::from_value(config)
-            .map_err(|e| anyhow!("Failed to parse DualThrust config: {}", e))?;
+            .map_err(|e| anyhow!("Failed to parse DualThrust config: {e}"))?;
 
         let strategy = DualThrust::new(params)?;
         Ok(Box::new(strategy))

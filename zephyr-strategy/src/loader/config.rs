@@ -30,7 +30,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -192,23 +192,23 @@ impl EngineConfig {
     /// - Required fields for each strategy type
     /// - Valid paths for Python strategies
     fn validate(&self) -> Result<(), ConfigError> {
-        let mut seen_names = HashMap::new();
+        let mut seen_names = HashSet::new();
 
         for strategy in &self.strategies {
             // Check for duplicate names
-            if seen_names.insert(&strategy.name, ()).is_some() {
+            if !seen_names.insert(&strategy.name) {
                 return Err(ConfigError::DuplicateName(strategy.name.clone()));
             }
 
             // Validate strategy-specific requirements
-            self.validate_strategy(strategy)?;
+            Self::validate_strategy(strategy)?;
         }
 
         Ok(())
     }
 
     /// Validate a single strategy configuration.
-    fn validate_strategy(&self, strategy: &StrategyConfig) -> Result<(), ConfigError> {
+    fn validate_strategy(strategy: &StrategyConfig) -> Result<(), ConfigError> {
         // Name is required
         if strategy.name.is_empty() {
             return Err(ConfigError::ValidationError(

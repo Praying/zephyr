@@ -141,7 +141,7 @@ struct LoadedStrategy {
 pub struct EngineHandle {
     /// Command senders for each runner (by strategy name)
     runners: HashMap<String, mpsc::Sender<RunnerCommand>>,
-    /// Subscription routing table: (symbol, data_type) -> list of strategy names
+    /// Subscription routing table: `(symbol, data_type)` -> list of strategy names
     subscriptions: HashMap<(Symbol, DataType), Vec<String>>,
     /// Signal receiver (aggregated from all strategies)
     signal_rx: mpsc::Receiver<(SignalId, Signal)>,
@@ -292,6 +292,7 @@ impl EngineHandle {
     }
 
     /// Returns the number of running strategies.
+    #[must_use]
     pub fn strategy_count(&self) -> usize {
         self.runners.len()
     }
@@ -437,7 +438,7 @@ impl StrategyEngine {
         let mut infos = Vec::new();
 
         for strategy_config in &self.config.strategies {
-            let loaded = self.load_single_strategy(strategy_config)?;
+            let loaded = Self::load_single_strategy(strategy_config)?;
             infos.push(StrategyInfo {
                 name: loaded.info.name.clone(),
                 strategy_type: loaded.info.strategy_type,
@@ -452,7 +453,7 @@ impl StrategyEngine {
     }
 
     /// Loads a single strategy from configuration.
-    fn load_single_strategy(&self, config: &StrategyConfig) -> Result<LoadedStrategy, EngineError> {
+    fn load_single_strategy(config: &StrategyConfig) -> Result<LoadedStrategy, EngineError> {
         info!(
             strategy = %config.name,
             strategy_type = %config.strategy_type,
@@ -504,6 +505,7 @@ impl StrategyEngine {
     /// Returns an error if:
     /// - Strategies fail to load
     /// - Engine is already running
+    #[allow(clippy::unused_async)]
     pub async fn start(mut self) -> Result<EngineHandle, EngineError> {
         // Load strategies if not already loaded
         if self.strategies.is_empty() {

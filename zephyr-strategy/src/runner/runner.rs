@@ -62,7 +62,7 @@ pub struct StrategyRunner {
     /// Error threshold before disabling strategy
     error_threshold: u32,
 
-    /// Whether this is a Python strategy (requires spawn_blocking)
+    /// Whether this is a Python strategy (requires `spawn_blocking`)
     is_python: bool,
 
     /// Whether the strategy has been initialized
@@ -164,7 +164,7 @@ impl StrategyRunner {
     ///
     /// This is the main event loop that:
     /// 1. Calls `on_init()` before processing any commands
-    /// 2. Processes commands (OnTick, OnBar, OnOrderStatus, Reload, Stop)
+    /// 2. Processes commands (`OnTick`, `OnBar`, `OnOrderStatus`, `Reload`, `Stop`)
     /// 3. Calls `on_stop()` when Stop command is received
     ///
     /// # Lifecycle
@@ -200,7 +200,7 @@ impl StrategyRunner {
                     self.handle_bar(&bar).await;
                 }
                 RunnerCommand::OnOrderStatus(status) => {
-                    self.handle_order_status(&status);
+                    self.handle_order_status(status);
                 }
                 RunnerCommand::Reload { path, class_name } => {
                     self.handle_reload(&path, &class_name).await;
@@ -246,18 +246,21 @@ impl StrategyRunner {
         }));
 
         result.map_err(|e| {
-            let msg = if let Some(s) = e.downcast_ref::<&str>() {
-                s.to_string()
-            } else if let Some(s) = e.downcast_ref::<String>() {
-                s.clone()
-            } else {
-                "Unknown panic".to_string()
-            };
-            format!("Panic in on_tick: {}", msg)
+            let msg = e.downcast_ref::<&str>().map_or_else(
+                || {
+                    e.downcast_ref::<String>().map_or_else(
+                        || "Unknown panic".to_string(),
+                        std::string::ToString::to_string,
+                    )
+                },
+                std::string::ToString::to_string,
+            );
+            format!("Panic in on_tick: {msg}")
         })
     }
 
-    /// Handles a tick using spawn_blocking (for Python strategies).
+    /// Handles a tick using `spawn_blocking` (for Python strategies).
+    #[allow(clippy::unused_async)]
     async fn handle_tick_blocking(&mut self, tick: &crate::types::Tick) -> Result<(), String> {
         // For Python strategies, we need to use spawn_blocking
         // However, since we can't move self into spawn_blocking easily,
@@ -267,6 +270,7 @@ impl StrategyRunner {
     }
 
     /// Handles a bar update.
+    #[allow(clippy::unused_async)]
     async fn handle_bar(&mut self, bar: &crate::types::Bar) {
         if self.disabled {
             return;
@@ -277,40 +281,45 @@ impl StrategyRunner {
         }));
 
         if let Err(e) = result {
-            let msg = if let Some(s) = e.downcast_ref::<&str>() {
-                s.to_string()
-            } else if let Some(s) = e.downcast_ref::<String>() {
-                s.clone()
-            } else {
-                "Unknown panic".to_string()
-            };
-            self.record_error(&format!("Panic in on_bar: {}", msg));
+            let msg = e.downcast_ref::<&str>().map_or_else(
+                || {
+                    e.downcast_ref::<String>().map_or_else(
+                        || "Unknown panic".to_string(),
+                        std::string::ToString::to_string,
+                    )
+                },
+                std::string::ToString::to_string,
+            );
+            self.record_error(&format!("Panic in on_bar: {msg}"));
         }
     }
 
     /// Handles an order status update.
-    fn handle_order_status(&mut self, status: &zephyr_core::data::OrderStatus) {
+    fn handle_order_status(&mut self, status: zephyr_core::data::OrderStatus) {
         if self.disabled {
             return;
         }
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.strategy.on_order_status(status, &mut self.ctx);
+            self.strategy.on_order_status(&status, &mut self.ctx);
         }));
 
         if let Err(e) = result {
-            let msg = if let Some(s) = e.downcast_ref::<&str>() {
-                s.to_string()
-            } else if let Some(s) = e.downcast_ref::<String>() {
-                s.clone()
-            } else {
-                "Unknown panic".to_string()
-            };
-            self.record_error(&format!("Panic in on_order_status: {}", msg));
+            let msg = e.downcast_ref::<&str>().map_or_else(
+                || {
+                    e.downcast_ref::<String>().map_or_else(
+                        || "Unknown panic".to_string(),
+                        std::string::ToString::to_string,
+                    )
+                },
+                std::string::ToString::to_string,
+            );
+            self.record_error(&format!("Panic in on_order_status: {msg}"));
         }
     }
 
     /// Handles a hot reload request (Python strategies only).
+    #[allow(clippy::needless_pass_by_ref_mut, clippy::unused_async)]
     async fn handle_reload(&mut self, path: &str, class_name: &str) {
         if !self.is_python {
             warn!(
@@ -580,9 +589,7 @@ mod tests {
         }
 
         fn on_tick(&mut self, _tick: &Tick, _ctx: &mut StrategyContext) {
-            if self.should_panic {
-                panic!("Test panic in on_tick");
-            }
+            assert!(!self.should_panic, "Test panic in on_tick");
             self.tick_count.fetch_add(1, Ordering::SeqCst);
         }
 

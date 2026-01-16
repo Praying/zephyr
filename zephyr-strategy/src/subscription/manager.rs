@@ -9,13 +9,13 @@ use std::collections::{HashMap, HashSet};
 use tracing::{debug, info};
 use zephyr_core::types::Symbol;
 
-/// Key for subscription lookup: (symbol, data_type).
+/// Key for subscription lookup: `(symbol, data_type)`.
 pub type SubscriptionKey = (Symbol, DataType);
 
 /// Manages market data subscriptions per strategy.
 ///
 /// The manager tracks:
-/// - Which strategies are subscribed to which (symbol, data_type) pairs
+/// - Which strategies are subscribed to which `(symbol, data_type)` pairs
 /// - Reverse mapping from strategies to their subscriptions
 ///
 /// # Thread Safety
@@ -52,10 +52,10 @@ pub type SubscriptionKey = (Symbol, DataType);
 /// ```
 #[derive(Debug, Default)]
 pub struct SubscriptionManager {
-    /// Forward mapping: (symbol, data_type) -> set of strategy names
+    /// Forward mapping: `(symbol, data_type)` -> set of strategy names
     subscriptions: HashMap<SubscriptionKey, HashSet<String>>,
 
-    /// Reverse mapping: strategy name -> set of (symbol, data_type)
+    /// Reverse mapping: strategy name -> set of `(symbol, data_type)`
     strategy_subscriptions: HashMap<String, HashSet<SubscriptionKey>>,
 }
 
@@ -135,20 +135,22 @@ impl SubscriptionManager {
     /// # Returns
     ///
     /// `true` if the subscription was added, `false` if it already existed.
-    pub fn subscribe(&mut self, strategy_name: &str, symbol: Symbol, data_type: DataType) -> bool {
+    pub fn subscribe(&mut self, strategy_name: &str, symbol: &Symbol, data_type: DataType) -> bool {
         let key = (symbol.clone(), data_type);
 
         // Check if already subscribed
-        if let Some(strategy_subs) = self.strategy_subscriptions.get(strategy_name) {
-            if strategy_subs.contains(&key) {
-                debug!(
-                    strategy = %strategy_name,
-                    symbol = %symbol,
-                    data_type = %data_type,
-                    "Subscription already exists"
-                );
-                return false;
-            }
+        if self
+            .strategy_subscriptions
+            .get(strategy_name)
+            .is_some_and(|strategy_subs| strategy_subs.contains(&key))
+        {
+            debug!(
+                strategy = %strategy_name,
+                symbol = %symbol,
+                data_type = %data_type,
+                "Subscription already exists"
+            );
+            return false;
         }
 
         // Add to forward mapping
@@ -241,7 +243,7 @@ impl SubscriptionManager {
     pub fn handle_command(&mut self, strategy_name: &str, command: SubscriptionCommand) {
         match command {
             SubscriptionCommand::Add { symbol, data_type } => {
-                self.subscribe(strategy_name, symbol, data_type);
+                self.subscribe(strategy_name, &symbol, data_type);
             }
             SubscriptionCommand::Remove { symbol, data_type } => {
                 self.unsubscribe(strategy_name, &symbol, data_type);
@@ -249,7 +251,7 @@ impl SubscriptionManager {
         }
     }
 
-    /// Returns all strategy names subscribed to a specific (symbol, data_type) pair.
+    /// Returns all strategy names subscribed to a specific `(symbol, data_type)` pair.
     ///
     /// # Arguments
     ///
@@ -272,7 +274,7 @@ impl SubscriptionManager {
     ///
     /// # Arguments
     ///
-    /// * `key` - The (symbol, data_type) key to check
+    /// * `key` - The `(symbol, data_type)` key to check
     ///
     /// # Returns
     ///
@@ -282,7 +284,7 @@ impl SubscriptionManager {
         self.subscriptions.get(key)
     }
 
-    /// Checks if a strategy is subscribed to a specific (symbol, data_type) pair.
+    /// Checks if a strategy is subscribed to a specific `(symbol, data_type)` pair.
     ///
     /// # Arguments
     ///
@@ -309,7 +311,7 @@ impl SubscriptionManager {
     ///
     /// # Returns
     ///
-    /// A vector of (symbol, data_type) pairs the strategy is subscribed to.
+    /// A vector of `(symbol, data_type)` pairs the strategy is subscribed to.
     #[must_use]
     pub fn get_strategy_subscriptions(&self, strategy_name: &str) -> Vec<SubscriptionKey> {
         self.strategy_subscriptions
@@ -421,18 +423,18 @@ mod tests {
         let mut manager = SubscriptionManager::new();
 
         // Subscribe to new data
-        assert!(manager.subscribe("strategy1", btc_symbol(), DataType::Tick));
+        assert!(manager.subscribe("strategy1", &btc_symbol(), DataType::Tick));
         assert!(manager.is_subscribed("strategy1", &btc_symbol(), DataType::Tick));
 
         // Duplicate subscription returns false
-        assert!(!manager.subscribe("strategy1", btc_symbol(), DataType::Tick));
+        assert!(!manager.subscribe("strategy1", &btc_symbol(), DataType::Tick));
     }
 
     #[test]
     fn test_unsubscribe() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
 
         // Unsubscribe existing
         assert!(manager.unsubscribe("strategy1", &btc_symbol(), DataType::Tick));
@@ -459,7 +461,7 @@ mod tests {
     fn test_handle_command_remove() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
 
         let cmd = SubscriptionCommand::Remove {
             symbol: btc_symbol(),
@@ -474,9 +476,9 @@ mod tests {
     fn test_get_subscribers() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy2", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy3", eth_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy2", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy3", &eth_symbol(), DataType::Tick);
 
         let btc_subscribers = manager.get_subscribers(&btc_symbol(), DataType::Tick);
         assert_eq!(btc_subscribers.len(), 2);
@@ -492,8 +494,8 @@ mod tests {
     fn test_get_strategy_subscriptions() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy1", eth_symbol(), DataType::Bar(Timeframe::H1));
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &eth_symbol(), DataType::Bar(Timeframe::H1));
 
         let subs = manager.get_strategy_subscriptions("strategy1");
         assert_eq!(subs.len(), 2);
@@ -507,7 +509,7 @@ mod tests {
 
         assert!(!manager.has_subscribers(&btc_symbol(), DataType::Tick));
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
         assert!(manager.has_subscribers(&btc_symbol(), DataType::Tick));
 
         manager.unsubscribe("strategy1", &btc_symbol(), DataType::Tick);
@@ -518,8 +520,8 @@ mod tests {
     fn test_multiple_strategies_same_subscription() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy2", btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy2", &btc_symbol(), DataType::Tick);
 
         // Both should be subscribed
         assert!(manager.is_subscribed("strategy1", &btc_symbol(), DataType::Tick));
@@ -540,8 +542,8 @@ mod tests {
     fn test_clear() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy2", eth_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy2", &eth_symbol(), DataType::Tick);
 
         manager.clear();
 
@@ -553,8 +555,8 @@ mod tests {
     fn test_strategy_names() {
         let mut manager = SubscriptionManager::new();
 
-        manager.subscribe("strategy1", btc_symbol(), DataType::Tick);
-        manager.subscribe("strategy2", eth_symbol(), DataType::Tick);
+        manager.subscribe("strategy1", &btc_symbol(), DataType::Tick);
+        manager.subscribe("strategy2", &eth_symbol(), DataType::Tick);
 
         let names = manager.strategy_names();
         assert_eq!(names.len(), 2);

@@ -8,6 +8,12 @@ use crate::loader::rust_loader::load_rust_strategy;
 use crate::r#trait::Strategy;
 use anyhow::Result;
 
+/// Type alias for strategy loading results
+pub type StrategyLoadResult = (String, Result<Box<dyn Strategy>, LoadError>);
+
+/// Type alias for successfully loaded strategies
+pub type LoadedStrategies = Vec<(String, Box<dyn Strategy>)>;
+
 #[cfg(feature = "python")]
 use crate::loader::config::PythonConfig;
 #[cfg(feature = "python")]
@@ -303,9 +309,8 @@ pub fn load_python_strategy_with_config(
 ///     println!("Loaded strategy: {}", name);
 /// }
 /// ```
-pub fn load_strategies(
-    strategies: &[StrategyConfig],
-) -> Vec<(String, Result<Box<dyn Strategy>, LoadError>)> {
+#[must_use]
+pub fn load_strategies(strategies: &[StrategyConfig]) -> Vec<StrategyLoadResult> {
     strategies
         .iter()
         .map(|config| {
@@ -331,9 +336,7 @@ pub fn load_strategies(
 /// # Errors
 ///
 /// Returns the first error encountered during loading.
-pub fn load_all_strategies(
-    strategies: &[StrategyConfig],
-) -> Result<Vec<(String, Box<dyn Strategy>)>, LoadError> {
+pub fn load_all_strategies(strategies: &[StrategyConfig]) -> Result<LoadedStrategies, LoadError> {
     strategies
         .iter()
         .map(|config| {

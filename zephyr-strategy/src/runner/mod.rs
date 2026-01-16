@@ -51,6 +51,7 @@
 //! ```
 
 mod command;
+#[allow(clippy::module_inception)]
 mod runner;
 
 #[cfg(feature = "hot-reload")]

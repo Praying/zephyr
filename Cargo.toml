@@ -70,7 +70,7 @@ zeroize = { version = "1.8", features = ["derive"] }
 jsonwebtoken = "9.3"
 
 # Data storage
-lz4_flex = "0.11"
+lz4_flex = "0.12"
 crc32fast = "1.4"
 memmap2 = "0.9"
 

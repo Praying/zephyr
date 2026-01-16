@@ -7,7 +7,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::time::Duration;
 
 use zephyr_core::config::ZephyrConfig;
 
@@ -56,23 +55,19 @@ impl ServerConfig {
             .validate()
             .map_err(|e| ConfigValidationError::InvalidConfig(e.to_string()))?;
 
-        // Validate plugin paths exist if specified
-        if let Some(ref path) = self.plugins.strategy_dir
-            && !path.exists()
-        {
-            return Err(ConfigValidationError::InvalidPath {
-                field: "plugins.strategy_dir".to_string(),
-                path: path.display().to_string(),
-            });
-        }
+        for strategy in &self.plugins.strategies {
+            if strategy.class.is_empty() {
+                return Err(ConfigValidationError::InvalidConfig(
+                    "plugins.strategies.class cannot be empty".to_string(),
+                ));
+            }
 
-        if let Some(ref path) = self.plugins.adapter_dir
-            && !path.exists()
-        {
-            return Err(ConfigValidationError::InvalidPath {
-                field: "plugins.adapter_dir".to_string(),
-                path: path.display().to_string(),
-            });
+            if strategy.strategy_type == StrategyLanguage::Python && strategy.path.is_none() {
+                return Err(ConfigValidationError::InvalidConfig(format!(
+                    "plugins.strategies.path missing for python strategy {}",
+                    strategy.name
+                )));
+            }
         }
 
         Ok(())
@@ -82,22 +77,6 @@ impl ServerConfig {
 /// Plugin configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginConfig {
-    /// Directory containing strategy plugins.
-    #[serde(default)]
-    pub strategy_dir: Option<PathBuf>,
-
-    /// Directory containing exchange adapter plugins.
-    #[serde(default)]
-    pub adapter_dir: Option<PathBuf>,
-
-    /// Whether to enable hot-reloading of plugins.
-    #[serde(default)]
-    pub hot_reload: bool,
-
-    /// Plugin scan interval in seconds (for hot-reload).
-    #[serde(default = "default_scan_interval_secs")]
-    pub scan_interval_secs: u64,
-
     /// List of strategies to load on startup.
     #[serde(default)]
     pub strategies: Vec<StrategyPluginConfig>,
@@ -107,17 +86,9 @@ pub struct PluginConfig {
     pub adapters: Vec<AdapterPluginConfig>,
 }
 
-fn default_scan_interval_secs() -> u64 {
-    30
-}
-
 impl Default for PluginConfig {
     fn default() -> Self {
         Self {
-            strategy_dir: None,
-            adapter_dir: None,
-            hot_reload: false,
-            scan_interval_secs: default_scan_interval_secs(),
             strategies: Vec::new(),
             adapters: Vec::new(),
         }
@@ -125,51 +96,33 @@ impl Default for PluginConfig {
 }
 
 impl PluginConfig {
-    /// Applies environment variable overrides.
-    pub fn apply_env_overrides(&mut self) {
-        if let Ok(val) = std::env::var("ZEPHYR_PLUGIN_STRATEGY_DIR") {
-            self.strategy_dir = Some(PathBuf::from(val));
-        }
-        if let Ok(val) = std::env::var("ZEPHYR_PLUGIN_ADAPTER_DIR") {
-            self.adapter_dir = Some(PathBuf::from(val));
-        }
-        if let Ok(val) = std::env::var("ZEPHYR_PLUGIN_HOT_RELOAD") {
-            self.hot_reload = val.parse().unwrap_or(false);
-        }
-    }
-
-    /// Returns the scan interval as a Duration.
-    #[must_use]
-    pub fn scan_interval(&self) -> Duration {
-        Duration::from_secs(self.scan_interval_secs)
-    }
+    pub fn apply_env_overrides(&mut self) {}
 }
 
-/// Strategy plugin configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyPluginConfig {
-    /// Plugin name/identifier.
     pub name: String,
 
-    /// Path to the plugin library (optional if in strategy_dir).
+    #[serde(rename = "type")]
+    pub strategy_type: StrategyLanguage,
+
+    pub class: String,
+
     #[serde(default)]
     pub path: Option<PathBuf>,
 
-    /// Strategy type (cta, hft, uft).
-    #[serde(default = "default_strategy_type")]
-    pub strategy_type: String,
-
-    /// Whether to auto-start this strategy.
     #[serde(default)]
     pub auto_start: bool,
 
-    /// Strategy-specific configuration.
-    #[serde(default)]
-    pub config: serde_json::Value,
+    #[serde(default, rename = "params")]
+    pub params: serde_json::Value,
 }
 
-fn default_strategy_type() -> String {
-    "cta".to_string()
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StrategyLanguage {
+    Rust,
+    Python,
 }
 
 /// Exchange adapter plugin configuration.
@@ -178,7 +131,6 @@ pub struct AdapterPluginConfig {
     /// Plugin name/identifier (e.g., "binance", "okx").
     pub name: String,
 
-    /// Path to the plugin library (optional if in adapter_dir).
     #[serde(default)]
     pub path: Option<PathBuf>,
 
@@ -292,14 +244,7 @@ mod tests {
     #[test]
     fn test_server_config_default() {
         let config = ServerConfig::default();
-        assert!(!config.plugins.hot_reload);
         assert!(config.shutdown.cancel_pending_orders);
-    }
-
-    #[test]
-    fn test_plugin_config_scan_interval() {
-        let config = PluginConfig::default();
-        assert_eq!(config.scan_interval(), Duration::from_secs(30));
     }
 
     #[test]

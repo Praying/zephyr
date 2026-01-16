@@ -11,11 +11,11 @@
     clippy::unnecessary_map_or
 )]
 
-use std::path::{Path, PathBuf};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 
-use crate::config::{AdapterPluginConfig, PluginConfig, StrategyPluginConfig};
+use crate::config::{AdapterPluginConfig, PluginConfig, StrategyLanguage, StrategyPluginConfig};
 use crate::plugin::registry::{AdapterPluginEntry, PluginRegistry, StrategyPluginEntry};
+use zephyr_strategy::loader::{StrategyConfig, StrategyType, load_strategy};
 
 /// Plugin API version for compatibility checking.
 pub const PLUGIN_API_VERSION: &str = "1.0";
@@ -30,86 +30,13 @@ pub const PLUGIN_API_VERSION: &str = "1.0";
 pub struct PluginLoader {
     /// Plugin configuration.
     config: PluginConfig,
-    /// Discovered strategy plugins.
-    discovered_strategies: Vec<PathBuf>,
-    /// Discovered adapter plugins.
-    discovered_adapters: Vec<PathBuf>,
 }
 
 impl PluginLoader {
     /// Creates a new plugin loader with the given configuration.
     #[must_use]
     pub fn new(config: PluginConfig) -> Self {
-        Self {
-            config,
-            discovered_strategies: Vec::new(),
-            discovered_adapters: Vec::new(),
-        }
-    }
-
-    /// Scans plugin directories for available plugins.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if directory scanning fails.
-    pub fn scan_directories(&mut self) -> Result<(), PluginError> {
-        // Scan strategy directory
-        if let Some(ref dir) = self.config.strategy_dir {
-            self.discovered_strategies = self.scan_directory(dir, "strategy")?;
-            info!(
-                "Discovered {} strategy plugins in {:?}",
-                self.discovered_strategies.len(),
-                dir
-            );
-        }
-
-        // Scan adapter directory
-        if let Some(ref dir) = self.config.adapter_dir {
-            self.discovered_adapters = self.scan_directory(dir, "adapter")?;
-            info!(
-                "Discovered {} adapter plugins in {:?}",
-                self.discovered_adapters.len(),
-                dir
-            );
-        }
-
-        Ok(())
-    }
-
-    /// Scans a directory for plugin files.
-    fn scan_directory(&self, dir: &Path, plugin_type: &str) -> Result<Vec<PathBuf>, PluginError> {
-        if !dir.exists() {
-            warn!("Plugin directory does not exist: {:?}", dir);
-            return Ok(Vec::new());
-        }
-
-        let mut plugins = Vec::new();
-
-        let entries = std::fs::read_dir(dir).map_err(|e| PluginError::IoError {
-            path: dir.display().to_string(),
-            reason: e.to_string(),
-        })?;
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-
-            // Check for shared library extensions
-            if Self::is_plugin_file(&path) {
-                debug!("Found {} plugin: {:?}", plugin_type, path);
-                plugins.push(path);
-            }
-        }
-
-        Ok(plugins)
-    }
-
-    /// Checks if a file is a potential plugin file.
-    fn is_plugin_file(path: &Path) -> bool {
-        path.extension()
-            .map(|ext| ext.to_string_lossy().to_lowercase())
-            .map_or(false, |ext| {
-                matches!(ext.as_str(), "so" | "dylib" | "dll" | "py")
-            })
+        Self { config }
     }
 
     /// Loads all configured strategy plugins into the registry.
@@ -143,15 +70,28 @@ impl PluginLoader {
         &self,
         config: &StrategyPluginConfig,
     ) -> Result<StrategyPluginEntry, PluginError> {
-        // For now, we support built-in strategies
-        // Future: Load from shared library or Python
+        let strategy_config = StrategyConfig {
+            name: config.name.clone(),
+            strategy_type: match config.strategy_type {
+                StrategyLanguage::Rust => StrategyType::Rust,
+                StrategyLanguage::Python => StrategyType::Python,
+            },
+            class: config.class.clone(),
+            path: config.path.clone(),
+            params: config.params.clone(),
+        };
+
+        load_strategy(&strategy_config).map_err(|e| PluginError::LoadError {
+            name: config.name.clone(),
+            reason: e.to_string(),
+        })?;
 
         let entry = StrategyPluginEntry {
             config: config.clone(),
             metadata: crate::plugin::registry::PluginMetadata {
                 name: config.name.clone(),
                 version: "0.1.0".to_string(),
-                description: format!("{} strategy", config.strategy_type),
+                description: format!("{:?} strategy", config.strategy_type),
                 author: None,
                 api_version: PLUGIN_API_VERSION.to_string(),
             },
@@ -170,7 +110,6 @@ impl PluginLoader {
     pub fn load_adapters(&self, registry: &mut PluginRegistry) -> Result<(), PluginError> {
         for adapter_config in &self.config.adapters {
             if !adapter_config.enabled {
-                debug!("Skipping disabled adapter: {}", adapter_config.name);
                 continue;
             }
 
@@ -229,22 +168,8 @@ impl PluginLoader {
         Ok(entry)
     }
 
-    /// Returns discovered strategy plugin paths.
-    #[must_use]
-    pub fn discovered_strategies(&self) -> &[PathBuf] {
-        &self.discovered_strategies
-    }
-
-    /// Returns discovered adapter plugin paths.
-    #[must_use]
-    pub fn discovered_adapters(&self) -> &[PathBuf] {
-        &self.discovered_adapters
-    }
-
-    /// Checks if a plugin is compatible with the current API version.
     #[must_use]
     pub fn is_compatible(plugin_api_version: &str) -> bool {
-        // Simple version check - in production, use semver
         plugin_api_version == PLUGIN_API_VERSION
     }
 }
@@ -303,24 +228,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_plugin_loader_new() {
-        let config = PluginConfig::default();
-        let loader = PluginLoader::new(config);
-        assert!(loader.discovered_strategies().is_empty());
-        assert!(loader.discovered_adapters().is_empty());
-    }
-
-    #[test]
-    fn test_is_plugin_file() {
-        assert!(PluginLoader::is_plugin_file(Path::new("plugin.so")));
-        assert!(PluginLoader::is_plugin_file(Path::new("plugin.dylib")));
-        assert!(PluginLoader::is_plugin_file(Path::new("plugin.dll")));
-        assert!(PluginLoader::is_plugin_file(Path::new("strategy.py")));
-        assert!(!PluginLoader::is_plugin_file(Path::new("config.yaml")));
-        assert!(!PluginLoader::is_plugin_file(Path::new("readme.md")));
-    }
-
-    #[test]
     fn test_is_compatible() {
         assert!(PluginLoader::is_compatible(PLUGIN_API_VERSION));
         assert!(!PluginLoader::is_compatible("0.9"));
@@ -374,10 +281,14 @@ mod tests {
 
         let strategy_config = StrategyPluginConfig {
             name: "test_strategy".to_string(),
+            strategy_type: crate::config::StrategyLanguage::Rust,
+            class: "DualThrust".to_string(),
             path: None,
-            strategy_type: "cta".to_string(),
             auto_start: false,
-            config: serde_json::Value::Null,
+            params: serde_json::json!({
+                "name": "test_strategy",
+                "symbol": "BTC-USDT"
+            }),
         };
 
         let result = loader.load_strategy(&strategy_config);

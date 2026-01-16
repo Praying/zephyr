@@ -20,6 +20,7 @@ zephyr-gateway = { path = "../zephyr-gateway" }
 zephyr-risk = { path = "../zephyr-risk" }
 zephyr-api = { path = "../zephyr-api" }
 zephyr-telemetry = { path = "../zephyr-telemetry" }
+zephyr-strategy = { path = "../zephyr-strategy" }
 
 # Async runtime
 tokio.workspace = true

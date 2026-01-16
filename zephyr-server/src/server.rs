@@ -17,63 +17,44 @@ use tracing_appender::non_blocking::WorkerGuard;
 
 use zephyr_api::{ApiConfig, ApiServer, AppState};
 use zephyr_core::config::ConfigLoader;
+use zephyr_strategy::engine::{EngineHandle, StrategyEngine};
+use zephyr_strategy::loader::{EngineConfig, PythonConfig, StrategyConfig, StrategyType};
 use zephyr_telemetry::logging::{LogConfig, init_logging};
 use zephyr_telemetry::metrics::{MetricsConfig, init_metrics};
 
-use crate::config::ServerConfig;
-use crate::plugin::PluginRegistry;
+use crate::config::{ServerConfig, StrategyLanguage};
+use crate::plugin::{PluginLoader, PluginRegistry};
 use crate::shutdown::{ShutdownController, setup_signal_handlers};
 
-/// Server state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ServerState {
-    /// Server is not started.
     Stopped,
-    /// Server is starting up.
     Starting,
-    /// Server is running.
     Running,
-    /// Server is shutting down.
     ShuttingDown,
 }
 
-/// Main Zephyr server.
-///
-/// Orchestrates all components and manages the server lifecycle.
 pub struct ZephyrServer {
-    /// Server configuration.
     config: ServerConfig,
-    /// Current server state.
     state: Arc<RwLock<ServerState>>,
-    /// Shutdown controller.
     shutdown: ShutdownController,
-    /// Plugin registry.
     plugins: Arc<RwLock<PluginRegistry>>,
-    /// Log guards (must be kept alive).
+    strategy_engine: Arc<RwLock<Option<EngineHandle>>>,
     _log_guards: Vec<WorkerGuard>,
 }
 
 impl ZephyrServer {
-    /// Creates a new server with the given configuration.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if initialization fails.
     pub fn new(config: ServerConfig) -> Result<Self, ServerError> {
         Ok(Self {
             config,
             state: Arc::new(RwLock::new(ServerState::Stopped)),
             shutdown: ShutdownController::new(),
             plugins: Arc::new(RwLock::new(PluginRegistry::new())),
+            strategy_engine: Arc::new(RwLock::new(None)),
             _log_guards: Vec::new(),
         })
     }
 
-    /// Loads configuration from a file.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the file cannot be read or parsed.
     pub fn load_config<P: AsRef<Path>>(path: P) -> Result<ServerConfig, ServerError> {
         let loader = ConfigLoader::new().with_env_prefix("ZEPHYR");
         let mut config: ServerConfig = loader
@@ -91,30 +72,20 @@ impl ZephyrServer {
         Ok(config)
     }
 
-    /// Returns the current server state.
     pub async fn state(&self) -> ServerState {
         *self.state.read().await
     }
 
-    /// Returns the shutdown controller.
     #[must_use]
     pub fn shutdown_controller(&self) -> &ShutdownController {
         &self.shutdown
     }
 
-    /// Returns the plugin registry.
     #[must_use]
     pub fn plugins(&self) -> &Arc<RwLock<PluginRegistry>> {
         &self.plugins
     }
 
-    /// Initializes the server components.
-    ///
-    /// This sets up logging, metrics, and loads plugins.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if initialization fails.
     pub async fn initialize(&mut self) -> Result<(), ServerError> {
         {
             let mut state = self.state.write().await;
@@ -128,20 +99,16 @@ impl ZephyrServer {
 
         info!("Initializing Zephyr server...");
 
-        // Initialize logging
         self.init_logging()?;
-
-        // Initialize metrics
         self.init_metrics();
 
-        // Load plugins
         self.load_plugins().await?;
+        self.start_strategy_engine().await?;
 
         info!("Zephyr server initialized successfully");
         Ok(())
     }
 
-    /// Initializes the logging system.
     fn init_logging(&mut self) -> Result<(), ServerError> {
         let log_config = LogConfig {
             level: self.config.zephyr.logging.level.clone(),
@@ -157,11 +124,9 @@ impl ZephyrServer {
         Ok(())
     }
 
-    /// Initializes the metrics system.
     fn init_metrics(&self) {
         let metrics_config = MetricsConfig::default();
 
-        // Metrics initialization may fail if already initialized (e.g., in tests)
         if let Err(e) = init_metrics(&metrics_config) {
             warn!("Metrics initialization: {}", e);
         } else {
@@ -169,23 +134,16 @@ impl ZephyrServer {
         }
     }
 
-    /// Loads plugins from configured directories.
     async fn load_plugins(&self) -> Result<(), ServerError> {
         let mut registry = self.plugins.write().await;
+        let loader = PluginLoader::new(self.config.plugins.clone());
 
-        // Load strategy plugins
-        for strategy_config in &self.config.plugins.strategies {
-            info!("Loading strategy plugin: {}", strategy_config.name);
-            registry.register_strategy(&strategy_config.name, strategy_config.clone());
-        }
-
-        // Load adapter plugins
-        for adapter_config in &self.config.plugins.adapters {
-            if adapter_config.enabled {
-                info!("Loading adapter plugin: {}", adapter_config.name);
-                registry.register_adapter(&adapter_config.name, adapter_config.clone());
-            }
-        }
+        loader
+            .load_strategies(&mut registry)
+            .map_err(|e| ServerError::PluginError(e.to_string()))?;
+        loader
+            .load_adapters(&mut registry)
+            .map_err(|e| ServerError::PluginError(e.to_string()))?;
 
         info!(
             "Loaded {} strategies and {} adapters",
@@ -196,13 +154,6 @@ impl ZephyrServer {
         Ok(())
     }
 
-    /// Runs the server.
-    ///
-    /// This starts all components and blocks until shutdown is initiated.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the server fails to start or encounters a fatal error.
     pub async fn run(&self) -> Result<(), ServerError> {
         {
             let mut state = self.state.write().await;
@@ -256,7 +207,6 @@ impl ZephyrServer {
         Ok(())
     }
 
-    /// Performs graceful shutdown.
     async fn graceful_shutdown(&self) -> Result<(), ServerError> {
         {
             let mut state = self.state.write().await;
@@ -265,19 +215,26 @@ impl ZephyrServer {
 
         info!("Performing graceful shutdown...");
 
-        // Cancel pending orders if configured
         if self.config.shutdown.cancel_pending_orders {
             info!("Cancelling pending orders...");
             self.cancel_pending_orders();
         }
 
-        // Save state if configured
         if self.config.shutdown.save_state {
             info!("Saving state...");
             self.save_state();
         }
 
-        // Unload plugins
+        {
+            let mut engine = self.strategy_engine.write().await;
+            if let Some(handle) = engine.take() {
+                handle
+                    .shutdown()
+                    .await
+                    .map_err(|e| ServerError::RuntimeError(e.to_string()))?;
+            }
+        }
+
         {
             let mut registry = self.plugins.write().await;
             registry.clear();
@@ -294,51 +251,69 @@ impl ZephyrServer {
         Ok(())
     }
 
-    /// Cancels all pending orders.
     fn cancel_pending_orders(&self) {
-        // In a full implementation, this would iterate through all active
-        // trading gateways and cancel pending orders
         let timeout = self.config.shutdown.cancel_timeout();
         info!("Order cancellation timeout: {:?}", timeout);
-
-        // Placeholder - actual implementation would cancel orders
     }
 
-    /// Saves server state for recovery.
     fn save_state(&self) {
-        // In a full implementation, this would save:
-        // - Strategy states
-        // - Position information
-        // - Pending order information
         info!("State saved successfully");
     }
 
-    /// Initiates server shutdown.
+    async fn start_strategy_engine(&self) -> Result<(), ServerError> {
+        let strategies = self
+            .config
+            .plugins
+            .strategies
+            .iter()
+            .map(|strategy| StrategyConfig {
+                name: strategy.name.clone(),
+                strategy_type: match strategy.strategy_type {
+                    StrategyLanguage::Rust => StrategyType::Rust,
+                    StrategyLanguage::Python => StrategyType::Python,
+                },
+                class: strategy.class.clone(),
+                path: strategy.path.clone(),
+                params: strategy.params.clone(),
+            })
+            .collect();
+
+        let engine_config = EngineConfig {
+            python: PythonConfig::default(),
+            strategies,
+        };
+
+        let engine = StrategyEngine::new(engine_config)
+            .map_err(|e| ServerError::InitializationError(e.to_string()))?;
+        let handle = engine
+            .start()
+            .map_err(|e| ServerError::InitializationError(e.to_string()))?;
+
+        let mut engine_slot = self.strategy_engine.write().await;
+        *engine_slot = Some(handle);
+
+        Ok(())
+    }
+
     pub fn shutdown(&self) {
         self.shutdown.initiate_shutdown();
     }
 }
 
-/// Server error type.
 #[derive(Debug, thiserror::Error)]
 pub enum ServerError {
-    /// Configuration error.
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
-    /// Initialization error.
     #[error("Initialization error: {0}")]
     InitializationError(String),
 
-    /// Invalid state error.
     #[error("Invalid state: {0}")]
     InvalidState(String),
 
-    /// Runtime error.
     #[error("Runtime error: {0}")]
     RuntimeError(String),
 
-    /// Plugin error.
     #[error("Plugin error: {0}")]
     PluginError(String),
 }

@@ -233,10 +233,11 @@ mod tests {
     fn create_test_strategy_config(name: &str) -> StrategyPluginConfig {
         StrategyPluginConfig {
             name: name.to_string(),
+            strategy_type: crate::config::StrategyLanguage::Rust,
+            class: "DualThrust".to_string(),
             path: None,
-            strategy_type: "cta".to_string(),
             auto_start: false,
-            config: serde_json::Value::Null,
+            params: serde_json::Value::Null,
         }
     }
 

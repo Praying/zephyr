@@ -38,7 +38,7 @@ tracing.workspace = true
 inventory.workspace = true
 
 # Python bindings (optional)
-pyo3 = { workspace = true, features = ["abi3-py310"], optional = true }
+pyo3 = { workspace = true, optional = true }
 
 # File watching for hot reload (optional)
 notify = { workspace = true, optional = true }

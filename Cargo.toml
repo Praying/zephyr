@@ -107,7 +107,7 @@ notify = "7.0"
 notify-debouncer-mini = "0.5"
 
 # Python bindings (optional)
-pyo3 = { version = "0.24.1", features = ["extension-module"] }
+pyo3 = { version = "0.24.1" }
 numpy = "0.24"
 
 [workspace.lints.rust]

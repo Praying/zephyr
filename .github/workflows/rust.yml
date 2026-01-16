@@ -121,17 +121,43 @@ jobs:
               if name:
                 env.write(f"RUSTFLAGS=-L{libpath} -l{name}\n")
           PY
-      - name: Install Python (macOS)
-        if: runner.os == 'macOS'
-        run: brew install python@3.10
-      - name: Configure PyO3 (macOS)
-        if: runner.os == 'macOS'
+      - name: Configure PyO3 (non-Windows)
+        if: runner.os != 'Windows'
         run: |
-          PYTHON_ROOT="$(brew --prefix python@3.10)"
-          echo "PYO3_PYTHON=$PYTHON_ROOT/bin/python3" >> $GITHUB_ENV
-          echo "PYO3_LIB_DIR=$PYTHON_ROOT/lib" >> $GITHUB_ENV
-          echo "PYO3_LIB_NAME=python3.10" >> $GITHUB_ENV
-          echo "RUSTFLAGS=-L$PYTHON_ROOT/lib -lpython3.10" >> $GITHUB_ENV
+          python3 - <<'PY'
+          import os
+          import sysconfig
+          from pathlib import Path
+
+          libdir = sysconfig.get_config_var("LIBDIR") or ""
+          libpl = sysconfig.get_config_var("LIBPL") or ""
+          ldlibrary = sysconfig.get_config_var("LDLIBRARY") or ""
+
+          candidates = [Path(p) for p in (libdir, libpl) if p]
+          libpath = None
+          if ldlibrary:
+            for candidate in candidates:
+              if (candidate / ldlibrary).exists():
+                libpath = candidate
+                break
+
+          if libpath is None and candidates:
+            libpath = candidates[0]
+
+          name = ldlibrary
+          if name.startswith("lib"):
+            name = name[3:]
+          for suffix in (".so", ".dylib", ".a"):
+            if name.endswith(suffix):
+              name = name[: -len(suffix)]
+
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+            env.write("PYO3_PYTHON=python3\n")
+            if libpath:
+              env.write(f"PYO3_LIB_DIR={libpath}\n")
+            if name:
+              env.write(f"PYO3_LIB_NAME={name}\n")
+          PY
       - name: Configure PyO3 (Windows)
         if: runner.os == 'Windows'
         shell: pwsh

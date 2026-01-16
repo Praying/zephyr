@@ -108,7 +108,7 @@ notify-debouncer-mini = "0.5"
 
 # Python bindings (optional)
 pyo3 = { version = "0.24.1" }
-numpy = "0.24"
+numpy = "0.27"
 
 [workspace.lints.rust]
 unsafe_code = "warn"

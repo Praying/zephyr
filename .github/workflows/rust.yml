@@ -84,10 +84,92 @@ jobs:
         with:
           shared-key: "rust-cache-${{ matrix.os }}"
           cache-on-failure: true
+      - name: Configure PyO3 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          python3 - <<'PY'
+          import os
+          import sysconfig
+          from pathlib import Path
+
+          libdir = sysconfig.get_config_var("LIBDIR") or ""
+          libpl = sysconfig.get_config_var("LIBPL") or ""
+          ldlibrary = sysconfig.get_config_var("LDLIBRARY") or ""
+
+          candidates = [Path(p) for p in (libdir, libpl) if p]
+          libpath = None
+          if ldlibrary:
+            for candidate in candidates:
+              if (candidate / ldlibrary).exists():
+                libpath = candidate
+                break
+
+          if libpath is None and candidates:
+            libpath = candidates[0]
+
+          name = ldlibrary
+          if name.startswith("lib"):
+            name = name[3:]
+          for suffix in (".so", ".dylib", ".a"):
+            if name.endswith(suffix):
+              name = name[: -len(suffix)]
+
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+            env.write("PYO3_PYTHON=python3\n")
+            if libpath:
+              env.write(f"PYO3_LIB_DIR={libpath}\n")
+              if name:
+                env.write(f"RUSTFLAGS=-L{libpath} -l{name}\n")
+          PY
+      - name: Configure PyO3 (non-Windows)
+        if: runner.os != 'Windows'
+        run: |
+          python3 - <<'PY'
+          import os
+          import sysconfig
+          from pathlib import Path
+
+          libdir = sysconfig.get_config_var("LIBDIR") or ""
+          libpl = sysconfig.get_config_var("LIBPL") or ""
+          ldlibrary = sysconfig.get_config_var("LDLIBRARY") or ""
+
+          candidates = [Path(p) for p in (libdir, libpl) if p]
+          libpath = None
+          if ldlibrary:
+            for candidate in candidates:
+              if (candidate / ldlibrary).exists():
+                libpath = candidate
+                break
+
+          if libpath is None and candidates:
+            libpath = candidates[0]
+
+          name = ldlibrary
+          if name.startswith("lib"):
+            name = name[3:]
+          for suffix in (".so", ".dylib", ".a"):
+            if name.endswith(suffix):
+              name = name[: -len(suffix)]
+
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+            env.write("PYO3_PYTHON=python3\n")
+            if libpath:
+              env.write(f"PYO3_LIB_DIR={libpath}\n")
+            if name:
+              env.write(f"PYO3_LIB_NAME={name}\n")
+          PY
+      - name: Configure PyO3 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $libdir = python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR') or sysconfig.get_config_var('LIBPL') or '')"
+          $ldlibrary = python -c "import sysconfig; print(sysconfig.get_config_var('LDLIBRARY') or '')"
+          $libname = $ldlibrary -replace '^lib','' -replace '\\.so$|\\.dylib$|\\.a$|\\.lib$',''
+          Add-Content $env:GITHUB_ENV "PYO3_PYTHON=python"
+          if ($libdir) { Add-Content $env:GITHUB_ENV "PYO3_LIB_DIR=$libdir" }
+          if ($libname) { Add-Content $env:GITHUB_ENV "PYO3_LIB_NAME=$libname" }
       - name: Run all tests
         run: cargo test --all-features --workspace --exclude zephyr-python
-        env:
-          RUSTFLAGS: ""
 
   fmt:
     name: Format check

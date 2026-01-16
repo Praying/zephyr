@@ -14,6 +14,7 @@ members = [
     "zephyr-telemetry",
     "zephyr-security",
     "zephyr-benchmark",
+    "zephyr-strategy",
 ]
 
 [workspace.package]
@@ -98,8 +99,15 @@ clap = { version = "4.5", features = ["derive", "env"] }
 proptest = "1.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 
+# Strategy registration
+inventory = "0.3"
+
+# File watching for hot reload
+notify = "7.0"
+notify-debouncer-mini = "0.5"
+
 # Python bindings (optional)
-pyo3 = { version = "0.24.1", features = ["extension-module"] }
+pyo3 = { version = "0.24.1" }
 numpy = "0.24"
 
 [workspace.lints.rust]

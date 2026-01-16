@@ -67,7 +67,7 @@ metrics-exporter-prometheus = "0.18"
 ring = "=0.17.13"
 argon2 = "0.5"
 zeroize = { version = "1.8", features = ["derive"] }
-jsonwebtoken = "9.3"
+jsonwebtoken = "10.2"
 
 # Data storage
 lz4_flex = "0.11"

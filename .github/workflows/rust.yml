@@ -90,9 +90,23 @@ jobs:
           python3 - <<'PY'
           import os
           import sysconfig
+          from pathlib import Path
 
-          libdir = sysconfig.get_config_var("LIBDIR") or sysconfig.get_config_var("LIBPL") or ""
+          libdir = sysconfig.get_config_var("LIBDIR") or ""
+          libpl = sysconfig.get_config_var("LIBPL") or ""
           ldlibrary = sysconfig.get_config_var("LDLIBRARY") or ""
+
+          candidates = [Path(p) for p in (libdir, libpl) if p]
+          libpath = None
+          if ldlibrary:
+            for candidate in candidates:
+              if (candidate / ldlibrary).exists():
+                libpath = candidate
+                break
+
+          if libpath is None and candidates:
+            libpath = candidates[0]
+
           name = ldlibrary
           if name.startswith("lib"):
             name = name[3:]
@@ -102,33 +116,43 @@ jobs:
 
           with open(os.environ["GITHUB_ENV"], "a") as env:
             env.write("PYO3_PYTHON=python3\n")
-            if libdir:
-              env.write(f"PYO3_LIB_DIR={libdir}\n")
+            if libpath:
+              env.write(f"PYO3_LIB_DIR={libpath}\n")
               if name:
-                env.write(f"RUSTFLAGS=-L{libdir} -l{name}\n")
+                env.write(f"RUSTFLAGS=-L{libpath} -l{name}\n")
           PY
       - name: Configure PyO3 (macOS)
         if: runner.os == 'macOS'
         run: |
           python3 - <<'PY'
           import os
+          import sys
           import sysconfig
 
-          libdir = sysconfig.get_config_var("LIBDIR") or ""
+          libdir = sysconfig.get_config_var("LIBDIR") or sysconfig.get_config_var("LIBPL") or ""
           ldlibrary = sysconfig.get_config_var("LDLIBRARY") or ""
-          name = ldlibrary
-          if name.startswith("lib"):
-            name = name[3:]
+          libname = ldlibrary
+
+          if "Python.framework" in libname:
+            libname = f"python{sys.version_info.major}.{sys.version_info.minor}"
+
+          if libname.startswith("lib"):
+            libname = libname[3:]
           for suffix in (".so", ".dylib", ".a"):
-            if name.endswith(suffix):
-              name = name[: -len(suffix)]
+            if libname.endswith(suffix):
+              libname = libname[: -len(suffix)]
+
+          if not libname:
+            libname = f"python{sys.version_info.major}.{sys.version_info.minor}"
 
           with open(os.environ["GITHUB_ENV"], "a") as env:
             env.write("PYO3_PYTHON=python3\n")
             if libdir:
               env.write(f"PYO3_LIB_DIR={libdir}\n")
-            if libdir and name:
-              env.write(f"RUSTFLAGS=-L{libdir} -l{name}\n")
+            if libname:
+              env.write(f"PYO3_LIB_NAME={libname}\n")
+            if libdir and libname:
+              env.write(f"RUSTFLAGS=-L{libdir} -l{libname}\n")
           PY
       - name: Configure PyO3 (Windows)
         if: runner.os == 'Windows'

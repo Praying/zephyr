@@ -295,6 +295,7 @@ pub enum PluginError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zephyr_core::types::StrategyType;
 
     #[test]
     fn test_plugin_loader_new() {
@@ -369,7 +370,7 @@ mod tests {
         let strategy_config = StrategyPluginConfig {
             name: "test_strategy".to_string(),
             path: None,
-            strategy_type: "cta".to_string(),
+            strategy_type: StrategyType::Cta,
             auto_start: false,
             config: serde_json::Value::Null,
         };

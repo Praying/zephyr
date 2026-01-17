@@ -328,11 +328,11 @@ impl OkxTrader {
             side,
             order_type,
             status,
-            price,
+            price: price.unwrap_or(Price::ZERO),
             stop_price: None,
             quantity,
             filled_quantity,
-            avg_price,
+            avg_price: avg_price.unwrap_or(Price::ZERO),
             time_in_force: tif,
             reduce_only,
             post_only: matches!(details.ord_type, OkxOrderType::PostOnly),
@@ -400,24 +400,16 @@ impl OkxTrader {
             symbol,
             side,
             quantity,
-            entry_price,
-            mark_price,
+            entry_price: Some(entry_price),
+            mark_price: mark_price.to_price().ok(),
             liquidation_price,
-            unrealized_pnl,
-            realized_pnl: Amount::ZERO,
-            leverage,
-            margin_type,
-            initial_margin: pos
-                .imr
-                .as_ref()
-                .and_then(|m| m.parse::<Decimal>().ok())
-                .and_then(|d| Amount::new(d).ok()),
-            maintenance_margin: pos
-                .mmr
-                .as_ref()
-                .and_then(|m| m.parse::<Decimal>().ok())
-                .and_then(|d| Amount::new(d).ok()),
-            update_time,
+            unrealized_pnl: Some(unrealized_pnl.into()),
+            realized_pnl: None,
+            leverage: Some(rust_decimal::Decimal::from(leverage.as_u8())),
+            margin_type: Some(margin_type),
+            initial_margin: pos.imr.as_ref().and_then(|m| m.parse::<Decimal>().ok()),
+            maintenance_margin: pos.mmr.as_ref().and_then(|m| m.parse::<Decimal>().ok()),
+            update_time: Some(update_time),
         })
     }
 }
@@ -575,9 +567,7 @@ impl TraderGateway for OkxTrader {
 
         // Add price for limit orders
         if order.order_type.requires_price() {
-            if let Some(price) = &order.price {
-                order_body["px"] = serde_json::json!(price.to_string());
-            }
+            order_body["px"] = serde_json::json!(order.price.to_string());
         }
 
         // Add client order ID if provided
@@ -1079,7 +1069,7 @@ impl TraderGateway for OkxTrader {
                     .and_then(|d| Amount::new(d).ok())
                     .unwrap_or(Amount::ZERO);
 
-                Some(Balance::new(&b.ccy, total, available, frozen))
+                Some(Balance::new(b.ccy.clone(), available.into(), frozen.into()))
             })
             .collect();
 
@@ -1098,10 +1088,7 @@ impl TraderGateway for OkxTrader {
             })?;
 
         // Calculate available balance from details
-        let available_balance = balances
-            .iter()
-            .map(|b| b.available.as_decimal())
-            .sum::<Decimal>();
+        let available_balance = balances.iter().map(|b| b.available()).sum::<Decimal>();
         let available_balance = Amount::new(available_balance).unwrap_or(Amount::ZERO);
 
         let margin_used = okx_account
@@ -1129,10 +1116,10 @@ impl TraderGateway for OkxTrader {
         Ok(Account {
             exchange: Exchange::Okx,
             balance: balances,
-            total_equity,
-            available_balance,
-            margin_used,
-            unrealized_pnl,
+            total_equity: total_equity.into(),
+            available_balance: available_balance.into(),
+            margin_used: margin_used.into(),
+            unrealized_pnl: unrealized_pnl.into(),
             update_time,
         })
     }

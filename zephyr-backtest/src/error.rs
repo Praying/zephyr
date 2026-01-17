@@ -46,10 +46,6 @@ pub enum BacktestError {
     #[error("invalid order state: {0}")]
     InvalidOrderState(String),
 
-    /// Data error
-    #[error("data error: {0}")]
-    Data(#[from] zephyr_core::data::DataValidationError),
-
     /// Internal error
     #[error("internal error: {0}")]
     Internal(String),

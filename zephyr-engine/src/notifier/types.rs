@@ -771,34 +771,48 @@ impl EventFilter {
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;
-    use zephyr_core::data::{MarginType, OrderSide, OrderStatus, OrderType, PositionSide};
+    use zephyr_core::data::{
+        MarginType, OrderSide, OrderStatus, OrderType, PositionSide, TimeInForce,
+    };
     use zephyr_core::types::{Leverage, OrderId, Price, Quantity};
 
     fn create_test_order() -> Order {
-        Order::builder()
-            .order_id(OrderId::new("test-order-1").unwrap())
-            .symbol(Symbol::new("BTC-USDT").unwrap())
-            .side(OrderSide::Buy)
-            .order_type(OrderType::Limit)
-            .status(OrderStatus::New)
-            .price(Price::new(dec!(50000)).unwrap())
-            .quantity(Quantity::new(dec!(1.0)).unwrap())
-            .build()
-            .unwrap()
+        Order {
+            order_id: OrderId::new("test-order-1").unwrap(),
+            client_order_id: None,
+            symbol: Symbol::new("BTC-USDT").unwrap(),
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
+            status: OrderStatus::New,
+            price: Price::new(dec!(50000)).unwrap(),
+            stop_price: None,
+            quantity: Quantity::new(dec!(1.0)).unwrap(),
+            filled_quantity: Quantity::ZERO,
+            avg_price: Price::ZERO,
+            time_in_force: TimeInForce::Gtc,
+            reduce_only: false,
+            post_only: false,
+            create_time: Timestamp::now(),
+            update_time: Timestamp::now(),
+        }
     }
 
     fn create_test_position() -> Position {
-        Position::builder()
-            .symbol(Symbol::new("BTC-USDT").unwrap())
-            .side(PositionSide::Long)
-            .quantity(Quantity::new(dec!(1.0)).unwrap())
-            .entry_price(Price::new(dec!(50000)).unwrap())
-            .mark_price(Price::new(dec!(51000)).unwrap().into())
-            .leverage(Leverage::new(10).unwrap())
-            .margin_type(MarginType::Cross)
-            .update_time(Timestamp::now())
-            .build()
-            .unwrap()
+        Position {
+            symbol: Symbol::new("BTC-USDT").unwrap(),
+            side: PositionSide::Long,
+            quantity: Quantity::new(dec!(1.0)).unwrap(),
+            entry_price: Some(Price::new(dec!(50000)).unwrap()),
+            mark_price: Some(Price::new(dec!(51000)).unwrap()),
+            liquidation_price: None,
+            unrealized_pnl: None,
+            realized_pnl: None,
+            leverage: Some(rust_decimal::Decimal::from(10)),
+            margin_type: Some(MarginType::Cross),
+            initial_margin: None,
+            maintenance_margin: None,
+            update_time: Some(Timestamp::now()),
+        }
     }
 
     #[test]

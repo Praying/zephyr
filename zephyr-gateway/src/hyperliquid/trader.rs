@@ -993,12 +993,7 @@ impl TraderGateway for HyperliquidTrader {
         let unrealized_pnl = Amount::new(unrealized_pnl).unwrap_or(Amount::ZERO);
 
         // Hyperliquid uses USDC as the settlement currency
-        let balance = Balance::new(
-            "USDC",
-            total_equity,
-            withdrawable,
-            Amount::new(margin_used.as_decimal()).unwrap_or(Amount::ZERO),
-        );
+        let balance = Balance::new("USDC".to_string(), withdrawable.into(), margin_used.into());
 
         Ok(Account {
             exchange: Exchange::Hyperliquid,

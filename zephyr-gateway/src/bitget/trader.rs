@@ -320,11 +320,11 @@ impl BitgetTrader {
             side,
             order_type,
             status,
-            price,
+            price: price.unwrap_or(Price::ZERO),
             stop_price: None,
             quantity,
             filled_quantity,
-            avg_price,
+            avg_price: avg_price.unwrap_or(Price::ZERO),
             time_in_force: match tif {
                 BitgetTimeInForce::Gtc => TimeInForce::Gtc,
                 BitgetTimeInForce::Ioc => TimeInForce::Ioc,
@@ -401,20 +401,16 @@ impl BitgetTrader {
             symbol,
             side,
             quantity,
-            entry_price,
-            mark_price,
+            entry_price: Some(entry_price),
+            mark_price: mark_price.to_price().ok(),
             liquidation_price,
-            unrealized_pnl,
-            realized_pnl,
-            leverage,
-            margin_type,
-            initial_margin: pos
-                .margin
-                .as_ref()
-                .and_then(|m| m.parse::<Decimal>().ok())
-                .and_then(|d| Amount::new(d).ok()),
+            unrealized_pnl: Some(unrealized_pnl.into()),
+            realized_pnl: Some(realized_pnl.into()),
+            leverage: Some(rust_decimal::Decimal::from(leverage.as_u8())),
+            margin_type: Some(margin_type),
+            initial_margin: pos.margin.as_ref().and_then(|m| m.parse::<Decimal>().ok()),
             maintenance_margin: None,
-            update_time,
+            update_time: Some(update_time),
         })
     }
 }
@@ -566,9 +562,7 @@ impl TraderGateway for BitgetTrader {
                 });
 
                 if order.order_type.requires_price() {
-                    if let Some(price) = &order.price {
-                        body["price"] = serde_json::json!(price.to_string());
-                    }
+                    body["price"] = serde_json::json!(order.price.to_string());
                 }
 
                 if let Some(client_order_id) = &order.client_order_id {
@@ -598,9 +592,7 @@ impl TraderGateway for BitgetTrader {
                 });
 
                 if order.order_type.requires_price() {
-                    if let Some(price) = &order.price {
-                        body["price"] = serde_json::json!(price.to_string());
-                    }
+                    body["price"] = serde_json::json!(order.price.to_string());
                 }
 
                 if let Some(client_order_id) = &order.client_order_id {
@@ -1116,15 +1108,9 @@ impl TraderGateway for BitgetTrader {
                     })
                     .collect();
 
-                let total_equity = balances
-                    .iter()
-                    .map(|b| b.total.as_decimal())
-                    .sum::<Decimal>();
+                let total_equity = balances.iter().map(|b| b.total()).sum::<Decimal>();
 
-                let available_balance = balances
-                    .iter()
-                    .map(|b| b.available.as_decimal())
-                    .sum::<Decimal>();
+                let available_balance = balances.iter().map(|b| b.available()).sum::<Decimal>();
 
                 Ok(Account {
                     exchange: Exchange::Bitget,
@@ -1167,7 +1153,6 @@ impl TraderGateway for BitgetTrader {
                             .unwrap_or(available);
                         Some(Balance::new_with_frozen(
                             a.margin_coin.clone(),
-                            equity.into(),
                             available.into(),
                             locked.into(),
                         ))

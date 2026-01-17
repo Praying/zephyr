@@ -359,19 +359,23 @@ fn ticks_to_csv(ticks: &[zephyr_core::data::TickData]) -> Result<String> {
     for tick in ticks {
         let best_bid = tick
             .bid_prices
-            .first()
+            .as_ref()
+            .and_then(|v| v.first())
             .map_or(String::new(), |p| p.as_decimal().to_string());
         let best_bid_qty = tick
             .bid_quantities
-            .first()
+            .as_ref()
+            .and_then(|v| v.first())
             .map_or(String::new(), |q| q.as_decimal().to_string());
         let best_ask = tick
             .ask_prices
-            .first()
+            .as_ref()
+            .and_then(|v| v.first())
             .map_or(String::new(), |p| p.as_decimal().to_string());
         let best_ask_qty = tick
             .ask_quantities
-            .first()
+            .as_ref()
+            .and_then(|v| v.first())
             .map_or(String::new(), |q| q.as_decimal().to_string());
 
         csv.push_str(&format!(

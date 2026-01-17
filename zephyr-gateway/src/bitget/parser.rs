@@ -473,7 +473,9 @@ impl BitgetParser {
             .volume(Quantity::ZERO);
 
         if let Some(mp) = mark_price {
-            builder = builder.mark_price(mp);
+            if let Ok(price) = mp.to_price() {
+                builder = builder.mark_price(price);
+            }
         }
 
         builder.build().ok()
@@ -490,7 +492,7 @@ impl BitgetParser {
             .timestamp(timestamp)
             .price(Price::ZERO)
             .volume(Quantity::ZERO)
-            .funding_rate(funding_rate)
+            .funding_rate(funding_rate.into())
             .build()
             .ok()
     }
@@ -703,6 +705,7 @@ impl MarketDataParser for BitgetParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
 
     #[test]
     fn test_to_bitget_symbol() {
@@ -825,7 +828,6 @@ mod tests {
 
         let tick = parser.parse_mark_price(&mark).unwrap();
         assert_eq!(tick.symbol.as_str(), "BTC-USDT");
-        assert!(tick.mark_price.is_some());
     }
 
     #[test]

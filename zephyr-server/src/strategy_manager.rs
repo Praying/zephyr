@@ -1,13 +1,11 @@
 //! Strategy lifecycle management.
 
 use dashmap::DashMap;
-use parking_lot::RwLock;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use tracing::{error, info};
 
 use zephyr_core::types::StrategyType;
 use zephyr_engine::ExecutionManager;
-use zephyr_engine::signal::SignalAggregator;
 
 use crate::config::StrategyPluginConfig;
 
@@ -23,20 +21,14 @@ pub enum StrategyStatus {
 pub struct StrategyManager {
     configs: DashMap<String, StrategyPluginConfig>,
     statuses: DashMap<String, StrategyStatus>,
-    signal_aggregator: Arc<SignalAggregator>,
 }
 
 impl StrategyManager {
     /// Creates a new strategy manager.
-    pub fn new(signal_aggregator: Arc<SignalAggregator>) -> Self {
-        // Create execution manager and register as listener
-        let execution_manager = Arc::new(ExecutionManager::new());
-        signal_aggregator.add_listener(execution_manager);
-
+    pub fn new() -> Self {
         Self {
             configs: DashMap::new(),
             statuses: DashMap::new(),
-            signal_aggregator,
         }
     }
 

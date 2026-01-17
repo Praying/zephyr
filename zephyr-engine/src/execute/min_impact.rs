@@ -266,7 +266,7 @@ impl MinImpactExecutor {
         // Check spread
         if let Some(spread) = tick.spread() {
             if let Some(mid) = tick.mid_price() {
-                let spread_bps = (spread / mid.as_decimal()) * Decimal::from(10000);
+                let spread_bps = (spread.as_decimal() / mid.as_decimal()) * Decimal::from(10000);
                 if spread_bps > self.config.max_spread_bps {
                     return MarketCondition::WideSpread;
                 }
@@ -339,8 +339,14 @@ impl MinImpactExecutor {
         };
 
         match side {
-            OrderSide::Buy => tick.ask_quantities.iter().map(|q| q.as_decimal()).sum(),
-            OrderSide::Sell => tick.bid_quantities.iter().map(|q| q.as_decimal()).sum(),
+            OrderSide::Buy => tick
+                .ask_quantities
+                .as_ref()
+                .map_or(Decimal::ZERO, |v| v.iter().map(|q| q.as_decimal()).sum()),
+            OrderSide::Sell => tick
+                .bid_quantities
+                .as_ref()
+                .map_or(Decimal::ZERO, |v| v.iter().map(|q| q.as_decimal()).sum()),
         }
     }
 

@@ -18,8 +18,6 @@ use crate::plugin::PluginRegistry;
 use crate::shutdown::{ShutdownController, setup_signal_handlers};
 use crate::strategy_manager::StrategyManager;
 
-use zephyr_engine::signal::SignalAggregator;
-
 /// Server state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ServerState {
@@ -58,8 +56,7 @@ impl ZephyrServer {
     ///
     /// Returns an error if initialization fails.
     pub fn new(config: ServerConfig) -> Result<Self, ServerError> {
-        let signal_aggregator = Arc::new(SignalAggregator::new());
-        let strategy_manager = Arc::new(StrategyManager::new(signal_aggregator));
+        let strategy_manager = Arc::new(StrategyManager::new());
 
         Ok(Self {
             config,

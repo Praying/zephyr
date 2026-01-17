@@ -157,18 +157,30 @@ impl MatchEngine {
         request: &OrderRequest,
         timestamp: Timestamp,
     ) -> Result<Order, BacktestError> {
-        // Validate the request
-        request
-            .validate()
-            .map_err(|e| BacktestError::OrderValidation(e.to_string()))?;
-
         // Generate order ID
         self.order_counter += 1;
         let order_id = OrderId::new(format!("BT-{:016X}", self.order_counter ^ self.seed))
             .map_err(|e| BacktestError::Internal(e.to_string()))?;
 
         // Create order from request
-        let order = Order::from_request(request, order_id.clone(), timestamp);
+        let order = Order {
+            order_id: order_id.clone(),
+            client_order_id: request.client_order_id.clone(),
+            symbol: request.symbol.clone(),
+            side: request.side,
+            order_type: request.order_type,
+            price: request.price,
+            quantity: request.quantity,
+            filled_quantity: Quantity::ZERO,
+            avg_price: Price::ZERO,
+            stop_price: request.stop_price,
+            status: OrderStatus::Pending,
+            time_in_force: request.time_in_force,
+            reduce_only: request.reduce_only,
+            post_only: request.post_only,
+            create_time: timestamp,
+            update_time: timestamp,
+        };
 
         // For market orders, they stay pending until matched
         // For limit orders, add to pending
@@ -190,7 +202,7 @@ impl MatchEngine {
 
         if order.status.is_final() {
             return Err(BacktestError::InvalidOrderState(format!(
-                "order already in final state: {}",
+                "order already in final state: {:?}",
                 order.status
             )));
         }
@@ -266,7 +278,10 @@ impl MatchEngine {
             .calculate(base_price, fill_quantity, order.side);
 
         let mut filled_order = order.clone();
-        filled_order.record_fill(fill_quantity, fill_price).ok()?;
+        filled_order.filled_quantity = fill_quantity;
+        filled_order.avg_price = fill_price;
+        filled_order.status = OrderStatus::Filled;
+        filled_order.update_time = Timestamp::now();
 
         Some(MatchResult {
             order: filled_order,
@@ -279,7 +294,7 @@ impl MatchEngine {
 
     /// Matches a limit order against a tick.
     fn match_limit_order(&self, order: &Order, tick: &TickData) -> Option<MatchResult> {
-        let limit_price = order.price?;
+        let limit_price = order.price;
 
         // Check if the limit price is crossed
         let is_crossed = match order.side {
@@ -324,7 +339,10 @@ impl MatchEngine {
                 .calculate(base_fill_price, fill_quantity, order.side);
 
         let mut filled_order = order.clone();
-        filled_order.record_fill(fill_quantity, fill_price).ok()?;
+        filled_order.filled_quantity = fill_quantity;
+        filled_order.avg_price = fill_price;
+        filled_order.status = OrderStatus::Filled;
+        filled_order.update_time = Timestamp::now();
 
         Some(MatchResult {
             order: filled_order,
@@ -382,37 +400,48 @@ mod tests {
     }
 
     fn create_market_buy(qty: Decimal) -> OrderRequest {
-        OrderRequest::builder()
-            .symbol(Symbol::new("BTC-USDT").unwrap())
-            .side(OrderSide::Buy)
-            .order_type(OrderType::Market)
-            .quantity(Quantity::new(qty).unwrap())
-            .build()
-            .unwrap()
+        OrderRequest {
+            symbol: Symbol::new("BTC-USDT").unwrap(),
+            side: OrderSide::Buy,
+            order_type: OrderType::Market,
+            price: Price::ZERO,
+            stop_price: None,
+            quantity: Quantity::new(qty).unwrap(),
+            time_in_force: TimeInForce::Gtc,
+            client_order_id: None,
+            reduce_only: false,
+            post_only: false,
+        }
     }
 
     fn create_limit_buy(qty: Decimal, price: Decimal) -> OrderRequest {
-        OrderRequest::builder()
-            .symbol(Symbol::new("BTC-USDT").unwrap())
-            .side(OrderSide::Buy)
-            .order_type(OrderType::Limit)
-            .quantity(Quantity::new(qty).unwrap())
-            .price(Price::new(price).unwrap())
-            .time_in_force(TimeInForce::Gtc)
-            .build()
-            .unwrap()
+        OrderRequest {
+            symbol: Symbol::new("BTC-USDT").unwrap(),
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
+            price: Price::new(price).unwrap(),
+            stop_price: None,
+            quantity: Quantity::new(qty).unwrap(),
+            time_in_force: TimeInForce::Gtc,
+            client_order_id: None,
+            reduce_only: false,
+            post_only: false,
+        }
     }
 
     fn create_limit_sell(qty: Decimal, price: Decimal) -> OrderRequest {
-        OrderRequest::builder()
-            .symbol(Symbol::new("BTC-USDT").unwrap())
-            .side(OrderSide::Sell)
-            .order_type(OrderType::Limit)
-            .quantity(Quantity::new(qty).unwrap())
-            .price(Price::new(price).unwrap())
-            .time_in_force(TimeInForce::Gtc)
-            .build()
-            .unwrap()
+        OrderRequest {
+            symbol: Symbol::new("BTC-USDT").unwrap(),
+            side: OrderSide::Sell,
+            order_type: OrderType::Limit,
+            price: Price::new(price).unwrap(),
+            stop_price: None,
+            quantity: Quantity::new(qty).unwrap(),
+            time_in_force: TimeInForce::Gtc,
+            client_order_id: None,
+            reduce_only: false,
+            post_only: false,
+        }
     }
 
     #[test]

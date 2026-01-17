@@ -229,12 +229,13 @@ impl PluginRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zephyr_core::types::StrategyType;
 
     fn create_test_strategy_config(name: &str) -> StrategyPluginConfig {
         StrategyPluginConfig {
             name: name.to_string(),
             path: None,
-            strategy_type: "cta".to_string(),
+            strategy_type: StrategyType::Cta,
             auto_start: false,
             config: serde_json::Value::Null,
         }

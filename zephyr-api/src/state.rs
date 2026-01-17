@@ -7,8 +7,10 @@ use crate::auth::JwtManager;
 use crate::config::ApiConfig;
 use crate::middleware::RateLimiter;
 
-use zephyr_core::types::StrategyType;
 use zephyr_security::tenant::TenantManager;
+
+// Re-export StrategyType for use in handlers
+pub use zephyr_core::types::StrategyType;
 
 /// Shared application state.
 #[derive(Debug)]
@@ -23,6 +25,8 @@ pub struct AppState {
     tenant_manager: Arc<TenantManager>,
     /// Strategy manager (type-erased to avoid circular dependency)
     pub strategy_manager: Option<Arc<dyn std::any::Any + Send + Sync>>,
+    /// Active strategies (strategy_id -> StrategyState)
+    pub strategies: DashMap<String, StrategyState>,
     /// Active orders (order_id -> OrderState)
     pub orders: DashMap<String, OrderState>,
 }
@@ -41,6 +45,7 @@ impl AppState {
             rate_limiter,
             tenant_manager,
             strategy_manager: None,
+            strategies: DashMap::new(),
             orders: DashMap::new(),
         }
     }

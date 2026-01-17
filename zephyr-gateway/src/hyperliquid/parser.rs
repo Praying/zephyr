@@ -684,8 +684,8 @@ mod tests {
         assert_eq!(orderbook.symbol.as_str(), "BTC-USD");
         assert_eq!(orderbook.bids.len(), 2);
         assert_eq!(orderbook.asks.len(), 2);
-        assert_eq!(orderbook.bids[0].price.as_decimal(), Decimal::from(41999));
-        assert_eq!(orderbook.asks[0].price.as_decimal(), Decimal::from(42001));
+        assert_eq!(orderbook.bids[0].0.as_decimal(), Decimal::from(41999));
+        assert_eq!(orderbook.asks[0].0.as_decimal(), Decimal::from(42001));
     }
 
     #[test]

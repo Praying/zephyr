@@ -323,11 +323,11 @@ impl BinanceTrader {
             side,
             order_type,
             status,
-            price,
+            price: price.unwrap_or(Price::ZERO),
             stop_price: None,
             quantity,
             filled_quantity,
-            avg_price,
+            avg_price: avg_price.unwrap_or(Price::ZERO),
             time_in_force: tif,
             reduce_only: resp.reduce_only.unwrap_or(false),
             post_only: matches!(tif, TimeInForce::PostOnly),
@@ -348,8 +348,7 @@ impl BinanceTrader {
 
         let entry_price = Price::new(pos.entry_price.parse().ok()?).ok()?;
         let mark_price = MarkPrice::new(pos.mark_price.parse().ok()?).ok()?;
-        let unrealized_pnl = pos.un_realized_profit.parse().ok()?;
-        let realized_pnl = pos.realized_profit.parse().ok()?;
+        let unrealized_pnl: Decimal = pos.un_realized_profit.parse().ok()?;
         let leverage = Some(pos.leverage.parse().ok()?);
 
         let liquidation_price = if pos.liquidation_price != "0" {
@@ -375,11 +374,11 @@ impl BinanceTrader {
             symbol,
             side,
             quantity: Quantity::new(quantity.as_decimal().abs()).ok()?,
-            entry_price,
-            mark_price,
+            entry_price: Some(entry_price),
+            mark_price: mark_price.to_price().ok(),
             liquidation_price,
-            unrealized_pnl: Some(unrealized_pnl.as_decimal()),
-            realized_pnl: Some(realized_pnl.as_decimal()),
+            unrealized_pnl: Some(unrealized_pnl),
+            realized_pnl: None,
             leverage,
             margin_type,
             initial_margin: None,
@@ -508,7 +507,9 @@ impl TraderGateway for BinanceTrader {
 
         // Add stop price for stop orders
         if order.order_type.requires_stop_price() {
-            request = request.query("stopPrice", order.stop_price.to_string());
+            if let Some(price) = order.stop_price {
+                request = request.query("stopPrice", price.to_string());
+            }
         }
 
         // Add reduce only for futures
@@ -880,7 +881,11 @@ impl TraderGateway for BinanceTrader {
                     )
                     .ok()?;
 
-                    Some(Balance::new_with_frozen(&b.asset, total, available, frozen))
+                    Some(Balance::new_with_frozen(
+                        b.asset.clone(),
+                        available.into(),
+                        frozen.into(),
+                    ))
                 })
                 .collect();
 
@@ -943,10 +948,10 @@ impl TraderGateway for BinanceTrader {
             Ok(Account {
                 exchange: Exchange::Binance,
                 balance: balances,
-                total_equity: Some(total_equity.into()),
-                available_balance: Some(available_balance.into()),
-                margin_used: Some(margin_used.into()),
-                unrealized_pnl: Some(unrealized_pnl.into()),
+                total_equity: total_equity.into(),
+                available_balance: available_balance.into(),
+                margin_used: margin_used.into(),
+                unrealized_pnl: unrealized_pnl.into(),
                 update_time: Timestamp::new(futures_account.update_time)
                     .unwrap_or_else(|_| Timestamp::now()),
             })

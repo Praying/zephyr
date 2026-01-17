@@ -376,8 +376,9 @@ impl BinanceParser {
             builder = builder.funding_rate(rate);
         }
         if let Some(mp) = mark {
-            let mp_val = Price::new(mp.mark_price.parse().ok()?).ok()?;
-            builder = builder.mark_price(mp_val);
+            if let Ok(mp_val) = mp.to_price() {
+                builder = builder.mark_price(mp_val);
+            }
         }
 
         builder.build().ok()

@@ -149,8 +149,8 @@ pub trait CtaStrategyContext: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A slice of K-line data, most recent last.
-    fn get_bars(&self, symbol: &Symbol, period: KlinePeriod, count: usize) -> &[KlineData];
+    /// A vector of K-line data, most recent last.
+    fn get_bars(&self, symbol: &Symbol, period: KlinePeriod, count: usize) -> Vec<KlineData>;
 
     /// Gets recent tick data for a symbol.
     ///
@@ -161,8 +161,8 @@ pub trait CtaStrategyContext: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A slice of tick data, most recent last.
-    fn get_ticks(&self, symbol: &Symbol, count: usize) -> &[TickData];
+    /// A vector of tick data, most recent last.
+    fn get_ticks(&self, symbol: &Symbol, count: usize) -> Vec<TickData>;
 
     /// Subscribes to tick data for a symbol.
     ///
@@ -491,7 +491,7 @@ pub trait SelStrategyContext: Send + Sync {
     fn set_universe(&self, symbols: Vec<Symbol>);
 
     /// Gets historical K-line data for a symbol.
-    fn get_bars(&self, symbol: &Symbol, period: KlinePeriod, count: usize) -> &[KlineData];
+    fn get_bars(&self, symbol: &Symbol, period: KlinePeriod, count: usize) -> Vec<KlineData>;
 
     /// Gets historical K-line data for multiple symbols.
     ///

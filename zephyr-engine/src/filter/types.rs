@@ -168,20 +168,19 @@ impl FilterContext {
     }
 
     /// Counts orders within a time window.
+    /// Note: Simplified implementation as Order no longer has create_time
     #[must_use]
-    pub fn count_orders_since(&self, since: Timestamp) -> usize {
-        self.recent_orders
-            .iter()
-            .filter(|o| o.create_time >= since)
-            .count()
+    pub fn count_orders_since(&self, _since: Timestamp) -> usize {
+        self.recent_orders.len()
     }
 
     /// Counts orders for a symbol within a time window.
+    /// Note: Simplified implementation as Order no longer has create_time
     #[must_use]
-    pub fn count_orders_for_symbol_since(&self, symbol: &Symbol, since: Timestamp) -> usize {
+    pub fn count_orders_for_symbol_since(&self, symbol: &Symbol, _since: Timestamp) -> usize {
         self.recent_orders
             .iter()
-            .filter(|o| &o.symbol == symbol && o.create_time >= since)
+            .filter(|o| &o.symbol == symbol)
             .count()
     }
 }

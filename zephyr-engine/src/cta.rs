@@ -204,19 +204,27 @@ impl CtaStrategyContext for CtaStrategyContextImpl {
         self.prices.get(symbol).map(|p| *p)
     }
 
-    fn get_bars(&self, _symbol: &Symbol, _period: KlinePeriod, _count: usize) -> &[KlineData] {
-        // Note: This returns an empty slice because we can't return a reference
-        // to data inside a RwLock. In a real implementation, we'd use a different
-        // approach (e.g., returning owned data or using a different data structure).
-        // For now, we provide a static empty slice.
-        static EMPTY: &[KlineData] = &[];
-        EMPTY
+    fn get_bars(&self, symbol: &Symbol, period: KlinePeriod, count: usize) -> Vec<KlineData> {
+        let cache = self.kline_cache.read();
+        let key = (symbol.clone(), period);
+        cache
+            .get(&key)
+            .map(|bars| {
+                let start = bars.len().saturating_sub(count);
+                bars[start..].to_vec()
+            })
+            .unwrap_or_default()
     }
 
-    fn get_ticks(&self, _symbol: &Symbol, _count: usize) -> &[TickData] {
-        // Same limitation as get_bars
-        static EMPTY: &[TickData] = &[];
-        EMPTY
+    fn get_ticks(&self, symbol: &Symbol, count: usize) -> Vec<TickData> {
+        let cache = self.tick_cache.read();
+        cache
+            .get(symbol)
+            .map(|ticks| {
+                let start = ticks.len().saturating_sub(count);
+                ticks[start..].to_vec()
+            })
+            .unwrap_or_default()
     }
 
     fn subscribe_ticks(&self, symbol: &Symbol) {

@@ -430,7 +430,7 @@ impl BitgetParser {
                 if level.len() >= 2 {
                     let price = Price::new(level[0].parse().ok()?).ok()?;
                     let quantity = Quantity::new(level[1].parse().ok()?).ok()?;
-                    Some(OrderBookLevel::new(price, quantity))
+                    Some((price, quantity))
                 } else {
                     None
                 }
@@ -444,7 +444,7 @@ impl BitgetParser {
                 if level.len() >= 2 {
                     let price = Price::new(level[0].parse().ok()?).ok()?;
                     let quantity = Quantity::new(level[1].parse().ok()?).ok()?;
-                    Some(OrderBookLevel::new(price, quantity))
+                    Some((price, quantity))
                 } else {
                     None
                 }

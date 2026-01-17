@@ -47,8 +47,8 @@ pub trait ExecuteContext: Send + Sync {
     ///
     /// # Returns
     ///
-    /// A slice of tick data, most recent last.
-    fn get_ticks(&self, symbol: &Symbol, count: usize) -> &[TickData];
+    /// A vector of tick data, most recent last.
+    fn get_ticks(&self, symbol: &Symbol, count: usize) -> Vec<TickData>;
 
     /// Gets the most recent tick for a symbol.
     ///

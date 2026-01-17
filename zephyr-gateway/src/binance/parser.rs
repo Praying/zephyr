@@ -372,10 +372,12 @@ impl BinanceParser {
             .volume(Quantity::ZERO);
 
         if let Some(fr) = funding_rate {
-            builder = builder.funding_rate(fr);
+            let rate: rust_decimal::Decimal = fr.into();
+            builder = builder.funding_rate(rate);
         }
         if let Some(mp) = mark {
-            builder = builder.mark_price(mp);
+            let mp_val = Price::new(mp.mark_price.parse().ok()?).ok()?;
+            builder = builder.mark_price(mp_val);
         }
 
         builder.build().ok()
@@ -383,28 +385,26 @@ impl BinanceParser {
 
     /// Parses depth update to OrderBook.
     fn parse_depth_update(&self, depth: &BinanceDepthUpdate) -> Option<OrderBook> {
-        use zephyr_core::data::OrderBookLevel;
-
         let symbol = Self::from_binance_symbol(&depth.symbol)?;
         let timestamp = Timestamp::new(depth.event_time).ok()?;
 
-        let bids: Vec<OrderBookLevel> = depth
+        let bids: Vec<(Price, Quantity)> = depth
             .bids
             .iter()
             .filter_map(|[p, q]| {
                 let price = Price::new(p.parse().ok()?).ok()?;
                 let quantity = Quantity::new(q.parse().ok()?).ok()?;
-                Some(OrderBookLevel::new(price, quantity))
+                Some((price, quantity))
             })
             .collect();
 
-        let asks: Vec<OrderBookLevel> = depth
+        let asks: Vec<(Price, Quantity)> = depth
             .asks
             .iter()
             .filter_map(|[p, q]| {
                 let price = Price::new(p.parse().ok()?).ok()?;
                 let quantity = Quantity::new(q.parse().ok()?).ok()?;
-                Some(OrderBookLevel::new(price, quantity))
+                Some((price, quantity))
             })
             .collect();
 

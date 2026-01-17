@@ -437,7 +437,7 @@ impl SymbolNormalizer {
             .custom_mappings
             .get(&(exchange_symbol.to_string(), exchange.clone()))
         {
-            return normalized.clone();
+            return normalized.to_string();
         }
 
         // Apply exchange-specific normalization rules
@@ -592,7 +592,7 @@ impl ContractManager {
         self.contracts
             .iter()
             .filter(|((_, ex), _)| ex == exchange)
-            .map(|(_, contract)| contract.clone())
+            .map(|(_, contract): (_, &Arc<ContractInfo>)| contract.clone())
             .collect()
     }
 

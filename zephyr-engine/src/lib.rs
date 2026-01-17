@@ -66,6 +66,7 @@
 mod cta;
 pub mod distributed;
 pub mod execute;
+mod execution_manager;
 pub mod filter;
 mod hft;
 pub mod notifier;
@@ -87,6 +88,7 @@ pub use distributed::{
     RaftState, StateSync, StateSyncConfig, StateSyncError, SyncMessage, TaskAssignment,
     TaskDistributor, TaskId, TaskPriority, TaskSignal, TaskStatus, VoteRequest, VoteResponse,
 };
+pub use execution_manager::ExecutionManager;
 pub use filter::{
     FilterChainResult, FilterContext, FilterEvent, FilterEventType, FilterId, FilterManager,
     FilterManagerConfig, FilterModification, FilterPriority, FilterRejection, FilterResult,

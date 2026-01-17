@@ -244,7 +244,7 @@ impl HyperliquidParser {
                 .filter_map(|level| {
                     let price = Price::new(level.price.parse().ok()?).ok()?;
                     let quantity = Quantity::new(level.size.parse().ok()?).ok()?;
-                    Some(OrderBookLevel::new(price, quantity))
+                    Some((price, quantity))
                 })
                 .collect();
 
@@ -253,7 +253,7 @@ impl HyperliquidParser {
                 .filter_map(|level| {
                     let price = Price::new(level.price.parse().ok()?).ok()?;
                     let quantity = Quantity::new(level.size.parse().ok()?).ok()?;
-                    Some(OrderBookLevel::new(price, quantity))
+                    Some((price, quantity))
                 })
                 .collect();
 

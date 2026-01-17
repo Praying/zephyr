@@ -1128,7 +1128,7 @@ impl TraderGateway for OkxTrader {
 
         Ok(Account {
             exchange: Exchange::Okx,
-            balances,
+            balance: balances,
             total_equity,
             available_balance,
             margin_used,

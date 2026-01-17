@@ -494,7 +494,7 @@ impl DistributedExecutor for DistributedExecutorImpl {
     async fn sync_state(&self) -> Result<(), ExecutorError> {
         // Create snapshot and apply (in real implementation, this would
         // communicate with other nodes)
-        let snapshot = self.state_sync.create_snapshot();
+        let _snapshot = self.state_sync.create_snapshot();
 
         // For now, just log that sync was requested
         debug!(

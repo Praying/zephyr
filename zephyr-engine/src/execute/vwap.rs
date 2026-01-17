@@ -625,8 +625,7 @@ impl ExecuteUnit for VwapExecutor {
             self.active_orders.retain(|id| id != &order.order_id);
 
             match order.status {
-                OrderStatus::Canceled => self.metrics.record_order_canceled(),
-                OrderStatus::Rejected => self.metrics.record_order_rejected(),
+                OrderStatus::Cancelled => self.metrics.record_order_canceled(),
                 _ => {}
             }
         }

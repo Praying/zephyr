@@ -16,6 +16,9 @@ use zephyr_telemetry::metrics::{MetricsConfig, init_metrics};
 use crate::config::ServerConfig;
 use crate::plugin::PluginRegistry;
 use crate::shutdown::{ShutdownController, setup_signal_handlers};
+use crate::strategy_manager::StrategyManager;
+
+use zephyr_engine::signal::SignalAggregator;
 
 /// Server state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +45,8 @@ pub struct ZephyrServer {
     shutdown: ShutdownController,
     /// Plugin registry.
     plugins: Arc<RwLock<PluginRegistry>>,
+    /// Strategy manager.
+    strategy_manager: Arc<StrategyManager>,
     /// Log guards (must be kept alive).
     _log_guards: Vec<WorkerGuard>,
 }
@@ -53,11 +58,15 @@ impl ZephyrServer {
     ///
     /// Returns an error if initialization fails.
     pub fn new(config: ServerConfig) -> Result<Self, ServerError> {
+        let signal_aggregator = Arc::new(SignalAggregator::new());
+        let strategy_manager = Arc::new(StrategyManager::new(signal_aggregator));
+
         Ok(Self {
             config,
             state: Arc::new(RwLock::new(ServerState::Stopped)),
             shutdown: ShutdownController::new(),
             plugins: Arc::new(RwLock::new(PluginRegistry::new())),
+            strategy_manager,
             _log_guards: Vec::new(),
         })
     }
@@ -172,6 +181,19 @@ impl ZephyrServer {
         for strategy_config in &self.config.plugins.strategies {
             info!("Loading strategy plugin: {}", strategy_config.name);
             registry.register_strategy(&strategy_config.name, strategy_config.clone());
+
+            // Register with strategy manager
+            self.strategy_manager.register(strategy_config.clone());
+
+            // Auto-start if configured
+            if strategy_config.auto_start {
+                if let Err(e) = self.strategy_manager.start(&strategy_config.name).await {
+                    error!(
+                        "Failed to auto-start strategy {}: {}",
+                        strategy_config.name, e
+                    );
+                }
+            }
         }
 
         // Load adapter plugins
@@ -219,7 +241,9 @@ impl ZephyrServer {
         };
 
         // Create API server
-        let api_state = Arc::new(AppState::new(api_config.clone()));
+        let mut api_state = AppState::new(api_config.clone());
+        api_state.set_strategy_manager(self.strategy_manager.clone());
+        let api_state = Arc::new(api_state);
         let api_server = ApiServer::with_state(api_config, api_state);
 
         // Setup signal handlers

@@ -118,12 +118,14 @@ impl ExecuteContextImpl {
 
 #[async_trait]
 impl ExecuteContext for ExecuteContextImpl {
-    fn get_ticks(&self, _symbol: &Symbol, _count: usize) -> &[TickData] {
-        // Note: This returns an empty slice because we can't return a reference
-        // to data inside DashMap. In practice, you'd use a different approach
-        // or return owned data.
-        static EMPTY: &[TickData] = &[];
-        EMPTY
+    fn get_ticks(&self, symbol: &Symbol, count: usize) -> Vec<TickData> {
+        self.tick_cache
+            .get(symbol)
+            .map(|ticks| {
+                let start = ticks.len().saturating_sub(count);
+                ticks[start..].to_vec()
+            })
+            .unwrap_or_default()
     }
 
     fn get_last_tick(&self, _symbol: &Symbol) -> Option<&TickData> {
@@ -169,7 +171,7 @@ impl ExecuteContext for ExecuteContextImpl {
             side: OrderSide::Buy,
             order_type: OrderType::Limit,
             quantity: qty,
-            price: Some(price),
+            price,
             stop_price: None,
             time_in_force: TimeInForce::Gtc,
             reduce_only: false,
@@ -199,7 +201,7 @@ impl ExecuteContext for ExecuteContextImpl {
             side: OrderSide::Sell,
             order_type: OrderType::Limit,
             quantity: qty,
-            price: Some(price),
+            price,
             stop_price: None,
             time_in_force: TimeInForce::Gtc,
             reduce_only: false,

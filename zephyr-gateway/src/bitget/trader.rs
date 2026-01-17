@@ -1112,7 +1112,7 @@ impl TraderGateway for BitgetTrader {
                             .unwrap_or(Amount::ZERO);
                         let total =
                             Amount::new(available.as_decimal() + frozen.as_decimal()).ok()?;
-                        Some(Balance::new(&b.coin, total, available, frozen))
+                        Some(Balance::new(b.coin.clone(), total.into(), frozen.into()))
                     })
                     .collect();
 
@@ -1128,11 +1128,11 @@ impl TraderGateway for BitgetTrader {
 
                 Ok(Account {
                     exchange: Exchange::Bitget,
-                    balances,
-                    total_equity: Amount::new(total_equity).unwrap_or(Amount::ZERO),
-                    available_balance: Amount::new(available_balance).unwrap_or(Amount::ZERO),
-                    margin_used: Amount::ZERO,
-                    unrealized_pnl: Amount::ZERO,
+                    balance: balances,
+                    total_equity: total_equity,
+                    available_balance: available_balance,
+                    margin_used: Decimal::ZERO,
+                    unrealized_pnl: Decimal::ZERO,
                     update_time: Timestamp::now(),
                 })
             }
@@ -1165,7 +1165,12 @@ impl TraderGateway for BitgetTrader {
                             .and_then(|e| e.parse::<Decimal>().ok())
                             .and_then(|d| Amount::new(d).ok())
                             .unwrap_or(available);
-                        Some(Balance::new(&a.margin_coin, equity, available, locked))
+                        Some(Balance::new_with_frozen(
+                            a.margin_coin.clone(),
+                            equity.into(),
+                            available.into(),
+                            locked.into(),
+                        ))
                     })
                     .collect();
 
@@ -1191,11 +1196,11 @@ impl TraderGateway for BitgetTrader {
 
                 Ok(Account {
                     exchange: Exchange::Bitget,
-                    balances,
-                    total_equity,
-                    available_balance,
-                    margin_used: Amount::ZERO,
-                    unrealized_pnl,
+                    balance: balances,
+                    total_equity: total_equity.into(),
+                    available_balance: available_balance.into(),
+                    margin_used: Amount::ZERO.into(),
+                    unrealized_pnl: unrealized_pnl.into(),
                     update_time: Timestamp::now(),
                 })
             }

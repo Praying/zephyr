@@ -7,6 +7,7 @@ use crate::auth::JwtManager;
 use crate::config::ApiConfig;
 use crate::middleware::RateLimiter;
 
+use zephyr_core::types::StrategyType;
 use zephyr_security::tenant::TenantManager;
 
 /// Shared application state.
@@ -20,8 +21,8 @@ pub struct AppState {
     pub rate_limiter: Arc<RateLimiter>,
     /// Tenant manager for multi-tenant support
     tenant_manager: Arc<TenantManager>,
-    /// Strategy states (strategy_id -> StrategyState)
-    pub strategies: DashMap<String, StrategyState>,
+    /// Strategy manager (type-erased to avoid circular dependency)
+    pub strategy_manager: Option<Arc<dyn std::any::Any + Send + Sync>>,
     /// Active orders (order_id -> OrderState)
     pub orders: DashMap<String, OrderState>,
 }
@@ -39,9 +40,14 @@ impl AppState {
             jwt_manager,
             rate_limiter,
             tenant_manager,
-            strategies: DashMap::new(),
+            strategy_manager: None,
             orders: DashMap::new(),
         }
+    }
+
+    /// Sets the strategy manager.
+    pub fn set_strategy_manager(&mut self, manager: Arc<dyn std::any::Any + Send + Sync>) {
+        self.strategy_manager = Some(manager);
     }
 
     /// Returns a reference to the JWT manager.
@@ -80,18 +86,6 @@ pub struct StrategyState {
     pub created_at: chrono::DateTime<chrono::Utc>,
     /// Last update timestamp
     pub updated_at: chrono::DateTime<chrono::Utc>,
-}
-
-/// Strategy type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum StrategyType {
-    /// CTA (Commodity Trading Advisor) strategy
-    Cta,
-    /// HFT (High-Frequency Trading) strategy
-    Hft,
-    /// UFT (Ultra-Fast Trading) strategy
-    Uft,
 }
 
 /// Strategy status.

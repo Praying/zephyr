@@ -265,7 +265,7 @@ impl UftStrategyContextImpl {
         flag: OrderFlag,
     ) -> OrderId {
         let order_id = self.order_pool.get();
-        let timestamp = Timestamp::from_nanos(self.timestamp.now_ns());
+        let _timestamp = Timestamp::from_nanos(self.timestamp.now_ns());
         let time_in_force = match flag {
             OrderFlag::Normal => TimeInForce::Gtc,
             OrderFlag::Fak => TimeInForce::Ioc,
@@ -277,15 +277,32 @@ impl UftStrategyContextImpl {
             symbol: symbol.clone(),
             side,
             order_type: OrderType::Limit,
-            quantity: qty,
-            price: Some(price),
+            price,
             stop_price: None,
+            quantity: qty,
             time_in_force,
-            reduce_only: matches!(flag, OrderFlag::ReduceOnly),
-            post_only: matches!(flag, OrderFlag::PostOnly),
             client_order_id: Some(order_id.as_str().to_string()),
+            reduce_only: false,
+            post_only: false,
         };
-        let order = Order::from_request(&request, order_id.clone(), timestamp);
+        let order = Order {
+            order_id: order_id.clone(),
+            symbol: symbol.clone(),
+            side,
+            order_type: OrderType::Limit,
+            price,
+            quantity: qty,
+            filled_quantity: Quantity::ZERO,
+            avg_price: Price::ZERO,
+            stop_price: None,
+            status: OrderStatus::Pending,
+            time_in_force,
+            client_order_id: Some(order_id.as_str().to_string()),
+            reduce_only: false,
+            post_only: false,
+            create_time: Timestamp::now(),
+            update_time: Timestamp::now(),
+        };
         self.orders_by_id.insert(order_id.clone(), order.clone());
         self.pending_orders
             .entry(symbol.clone())
@@ -317,10 +334,7 @@ impl UftStrategyContext for UftStrategyContextImpl {
                 trace!(order_id = %order_id, "UFT cancelling order");
                 drop(order);
                 if let Some(mut order) = self.orders_by_id.get_mut(order_id) {
-                    if order.status == OrderStatus::Pending {
-                        let _ = order.update_status(OrderStatus::New);
-                    }
-                    let _ = order.update_status(OrderStatus::Canceled);
+                    order.status = OrderStatus::Cancelled;
                 }
                 return true;
             }

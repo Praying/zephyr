@@ -408,7 +408,7 @@ impl CtaStrategy for DualThrustStrategy {
 
             if bars.len() >= self.config.lookback_days + 1 {
                 // Calculate range from historical data
-                if let Some(range_data) = self.calculate_range(bars) {
+                if let Some(range_data) = self.calculate_range(&bars) {
                     // Use today's open as base price
                     let today_open = bar.open.as_decimal();
                     self.today_open = Some(bar.open);

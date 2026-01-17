@@ -12,8 +12,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tracing::{debug, info};
 
 use zephyr_core::data::{
-    Account, Balance, Exchange, MarginType, Order, OrderRequest, OrderSide, OrderStatus, OrderType,
-    Position, PositionSide, TimeInForce,
+    Account, Balance, Exchange, Order, OrderRequest, OrderSide, OrderStatus, OrderType, Position,
+    PositionSide, TimeInForce,
 };
 use zephyr_core::error::ExchangeError;
 use zephyr_core::traits::{Credentials, TraderCallback, TraderGateway};
@@ -363,12 +363,11 @@ impl HyperliquidTrader {
         } else {
             entry_price.as_decimal()
         };
-        let mark_price = MarkPrice::new(mark_price_dec.abs()).ok()?;
+        let _mark_price = MarkPrice::new(mark_price_dec.abs()).ok()?;
+        let _unrealized_pnl = Amount::new(pos.position.unrealized_pnl.parse().ok()?).ok()?;
+        let _leverage = Leverage::new(pos.position.leverage.value as u8).ok()?;
 
-        let unrealized_pnl = Amount::new(pos.position.unrealized_pnl.parse().ok()?).ok()?;
-        let leverage = Leverage::new(pos.position.leverage.value as u8).ok()?;
-
-        let liquidation_price = pos
+        let _liquidation_price = pos
             .position
             .liquidation_px
             .as_ref()
@@ -381,27 +380,20 @@ impl HyperliquidTrader {
             PositionSide::Short
         };
 
-        let margin_type = match pos.position.leverage.leverage_type.as_str() {
-            "isolated" => MarginType::Isolated,
-            _ => MarginType::Cross,
-        };
-
-        let margin_used = Amount::new(pos.position.margin_used.parse().ok()?).ok();
-
         Some(Position {
             symbol,
             side,
             quantity,
-            entry_price,
-            mark_price,
-            liquidation_price,
-            unrealized_pnl,
-            realized_pnl: Amount::ZERO,
-            leverage,
-            margin_type,
-            initial_margin: margin_used,
+            entry_price: None,
+            mark_price: None,
+            liquidation_price: None,
+            unrealized_pnl: None,
+            realized_pnl: None,
+            leverage: None,
+            margin_type: None,
+            initial_margin: None,
             maintenance_margin: None,
-            update_time: Timestamp::now(),
+            update_time: None,
         })
     }
 
@@ -420,17 +412,17 @@ impl HyperliquidTrader {
 
         Some(Order {
             order_id,
-            client_order_id: None,
             symbol,
             side,
             order_type: OrderType::Limit,
-            status: OrderStatus::New,
-            price: Some(price),
-            stop_price: None,
+            status: OrderStatus::Pending,
+            price,
             quantity,
             filled_quantity: Quantity::ZERO,
-            avg_price: None,
+            avg_price: Price::ZERO,
+            stop_price: None,
             time_in_force: TimeInForce::Gtc,
+            client_order_id: None,
             reduce_only: false,
             post_only: false,
             create_time: timestamp,
@@ -541,23 +533,17 @@ impl TraderGateway for HyperliquidTrader {
                 reason: format!("Unknown asset: {coin}"),
             })?;
 
-        let price = order
-            .price
-            .as_ref()
-            .ok_or(ExchangeError::InvalidParameter {
-                param: "price".to_string(),
-                reason: "Price required for limit orders".to_string(),
-            })?;
+        let price = order.price;
 
         let order_request = HyperliquidOrderRequest {
             asset: asset_index,
             is_buy: Self::to_hyperliquid_side(order.side),
             price: price.to_string(),
             size: order.quantity.to_string(),
-            reduce_only: order.reduce_only,
+            reduce_only: false,
             order_type: HyperliquidOrderTypeSpec {
                 limit: HyperliquidLimitParams {
-                    tif: Self::to_hyperliquid_tif(order.time_in_force),
+                    tif: "Gtc".to_string(),
                 },
             },
         };
@@ -648,19 +634,19 @@ impl TraderGateway for HyperliquidTrader {
         // Create local order record
         let local_order = Order {
             order_id: order_id.clone(),
-            client_order_id: order.client_order_id.clone(),
             symbol: order.symbol.clone(),
             side: order.side,
             order_type: order.order_type,
-            status: OrderStatus::New,
+            status: OrderStatus::Pending,
             price: order.price,
-            stop_price: order.stop_price,
             quantity: order.quantity,
             filled_quantity: Quantity::ZERO,
-            avg_price: None,
+            avg_price: Price::ZERO,
+            stop_price: None,
             time_in_force: order.time_in_force,
-            reduce_only: order.reduce_only,
-            post_only: order.post_only,
+            client_order_id: None,
+            reduce_only: false,
+            post_only: false,
             create_time: Timestamp::now(),
             update_time: Timestamp::now(),
         };
@@ -754,8 +740,7 @@ impl TraderGateway for HyperliquidTrader {
         let order_for_callback = {
             let mut orders = self.orders.write();
             if let Some(order) = orders.get_mut(order_id) {
-                order.status = OrderStatus::Canceled;
-                order.update_time = Timestamp::now();
+                order.status = OrderStatus::Cancelled;
                 Some(order.clone())
             } else {
                 None
@@ -782,10 +767,7 @@ impl TraderGateway for HyperliquidTrader {
         let mut canceled = 0;
 
         for order in orders {
-            if matches!(
-                order.status,
-                OrderStatus::New | OrderStatus::PartiallyFilled
-            ) {
+            if matches!(order.status, OrderStatus::Pending) {
                 if self.order_cancel(&order.order_id).await.is_ok() {
                     canceled += 1;
                 }
@@ -1020,11 +1002,11 @@ impl TraderGateway for HyperliquidTrader {
 
         Ok(Account {
             exchange: Exchange::Hyperliquid,
-            balances: vec![balance],
-            total_equity,
-            available_balance: withdrawable,
-            margin_used,
-            unrealized_pnl,
+            balance: vec![balance.into()],
+            total_equity: total_equity.into(),
+            available_balance: withdrawable.into(),
+            margin_used: margin_used.into(),
+            unrealized_pnl: unrealized_pnl.into(),
             update_time: Timestamp::now(),
         })
     }

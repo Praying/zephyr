@@ -241,10 +241,16 @@ impl SelStrategyContext for SelStrategyContextImpl {
         *self.universe.write() = symbols;
     }
 
-    fn get_bars(&self, _symbol: &Symbol, _period: KlinePeriod, _count: usize) -> &[KlineData] {
-        // Note: Returns empty slice due to RwLock limitation
-        static EMPTY: &[KlineData] = &[];
-        EMPTY
+    fn get_bars(&self, symbol: &Symbol, period: KlinePeriod, count: usize) -> Vec<KlineData> {
+        let cache = self.kline_cache.read();
+        let key = (symbol.clone(), period);
+        cache
+            .get(&key)
+            .map(|bars| {
+                let start = bars.len().saturating_sub(count);
+                bars[start..].to_vec()
+            })
+            .unwrap_or_default()
     }
 
     fn get_bars_batch(

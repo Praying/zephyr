@@ -348,11 +348,12 @@ impl BinanceTrader {
 
         let entry_price = Price::new(pos.entry_price.parse().ok()?).ok()?;
         let mark_price = MarkPrice::new(pos.mark_price.parse().ok()?).ok()?;
-        let unrealized_pnl = Amount::new(pos.un_realized_profit.parse().ok()?).ok()?;
-        let leverage = Leverage::new(pos.leverage.parse().ok()?).ok()?;
+        let unrealized_pnl = pos.un_realized_profit.parse().ok()?;
+        let realized_pnl = pos.realized_profit.parse().ok()?;
+        let leverage = Some(pos.leverage.parse().ok()?);
 
         let liquidation_price = if pos.liquidation_price != "0" {
-            Price::new(pos.liquidation_price.parse().ok()?).ok()
+            Some(Price::new(pos.liquidation_price.parse().ok()?).ok()?)
         } else {
             None
         };
@@ -364,11 +365,11 @@ impl BinanceTrader {
         };
 
         let margin_type = match pos.margin_type {
-            BinanceMarginType::Cross => MarginType::Cross,
-            BinanceMarginType::Isolated => MarginType::Isolated,
+            BinanceMarginType::Cross => Some(MarginType::Cross),
+            BinanceMarginType::Isolated => Some(MarginType::Isolated),
         };
 
-        let update_time = Timestamp::new(pos.update_time).ok()?;
+        let update_time = Some(Timestamp::new(pos.update_time).ok()?);
 
         Some(Position {
             symbol,
@@ -377,8 +378,8 @@ impl BinanceTrader {
             entry_price,
             mark_price,
             liquidation_price,
-            unrealized_pnl,
-            realized_pnl: Amount::ZERO,
+            unrealized_pnl: Some(unrealized_pnl.as_decimal()),
+            realized_pnl: Some(realized_pnl.as_decimal()),
             leverage,
             margin_type,
             initial_margin: None,
@@ -497,9 +498,7 @@ impl TraderGateway for BinanceTrader {
 
         // Add price for limit orders
         if order.order_type.requires_price() {
-            if let Some(price) = &order.price {
-                request = request.query("price", price.to_string());
-            }
+            request = request.query("price", order.price.to_string());
         }
 
         // Add time in force for limit orders
@@ -509,9 +508,7 @@ impl TraderGateway for BinanceTrader {
 
         // Add stop price for stop orders
         if order.order_type.requires_stop_price() {
-            if let Some(stop_price) = &order.stop_price {
-                request = request.query("stopPrice", stop_price.to_string());
-            }
+            request = request.query("stopPrice", order.stop_price.to_string());
         }
 
         // Add reduce only for futures
@@ -525,7 +522,7 @@ impl TraderGateway for BinanceTrader {
         }
 
         // Add client order ID if provided
-        if let Some(client_order_id) = &order.client_order_id {
+        if let Some(ref client_order_id) = order.client_order_id {
             request = request.query("newClientOrderId", client_order_id);
         }
 
@@ -883,7 +880,7 @@ impl TraderGateway for BinanceTrader {
                     )
                     .ok()?;
 
-                    Some(Balance::new(&b.asset, total, available, frozen))
+                    Some(Balance::new_with_frozen(&b.asset, total, available, frozen))
                 })
                 .collect();
 
@@ -945,11 +942,11 @@ impl TraderGateway for BinanceTrader {
 
             Ok(Account {
                 exchange: Exchange::Binance,
-                balances,
-                total_equity,
-                available_balance,
-                margin_used,
-                unrealized_pnl,
+                balance: balances,
+                total_equity: Some(total_equity.into()),
+                available_balance: Some(available_balance.into()),
+                margin_used: Some(margin_used.into()),
+                unrealized_pnl: Some(unrealized_pnl.into()),
                 update_time: Timestamp::new(futures_account.update_time)
                     .unwrap_or_else(|_| Timestamp::now()),
             })
@@ -957,11 +954,11 @@ impl TraderGateway for BinanceTrader {
             // Spot account - simplified
             Ok(Account {
                 exchange: Exchange::Binance,
-                balances: Vec::new(),
-                total_equity: Amount::ZERO,
-                available_balance: Amount::ZERO,
-                margin_used: Amount::ZERO,
-                unrealized_pnl: Amount::ZERO,
+                balance: Vec::new(),
+                total_equity: Decimal::ZERO,
+                available_balance: Decimal::ZERO,
+                margin_used: Decimal::ZERO,
+                unrealized_pnl: Decimal::ZERO,
                 update_time: Timestamp::now(),
             })
         }

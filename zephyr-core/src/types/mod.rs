@@ -78,3 +78,30 @@ pub enum ValidationError {
     #[error("mark price cannot be negative: {0}")]
     NegativeMarkPrice(rust_decimal::Decimal),
 }
+
+/// Strategy type enumeration.
+///
+/// Defines the different types of trading strategies supported by the system.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StrategyType {
+    /// CTA (Commodity Trading Advisor) strategy - trend following, medium/low frequency
+    Cta,
+    /// HFT (High-Frequency Trading) strategy - market making, arbitrage
+    Hft,
+    /// UFT (Ultra-Fast Trading) strategy - ultra-low latency trading
+    Uft,
+    /// SEL (Selection/Scheduled) strategy - portfolio rebalancing, periodic execution
+    Sel,
+}
+
+impl std::fmt::Display for StrategyType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Cta => write!(f, "cta"),
+            Self::Hft => write!(f, "hft"),
+            Self::Uft => write!(f, "uft"),
+            Self::Sel => write!(f, "sel"),
+        }
+    }
+}

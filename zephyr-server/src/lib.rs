@@ -26,11 +26,15 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod config;
+pub mod market_data_router;
 pub mod plugin;
 pub mod server;
 pub mod shutdown;
+pub mod strategy_manager;
 
 pub use config::ServerConfig;
+pub use market_data_router::MarketDataRouter;
 pub use plugin::{PluginLoader, PluginRegistry};
 pub use server::ZephyrServer;
 pub use shutdown::ShutdownController;
+pub use strategy_manager::StrategyManager;

@@ -550,11 +550,8 @@ impl ExecuteUnit for TwapExecutor {
                 OrderStatus::Filled => {
                     // Already handled in on_trade
                 }
-                OrderStatus::Canceled => {
+                OrderStatus::Cancelled => {
                     self.metrics.record_order_canceled();
-                }
-                OrderStatus::Rejected => {
-                    self.metrics.record_order_rejected();
                 }
                 _ => {}
             }

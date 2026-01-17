@@ -477,11 +477,11 @@ impl PortfolioRebalancer {
         quantity: Quantity,
         price: Price,
     ) -> OrderRequest {
-        let (order_type, order_price) = if self.config.use_market_orders {
-            (OrderType::Market, None)
+        let order_price = if self.config.use_market_orders {
+            price
         } else {
             // Apply slippage for limit orders
-            let adjusted_price = match side {
+            match side {
                 OrderSide::Buy => {
                     // Buy slightly higher
                     let adj = price.as_decimal() * (Decimal::ONE + self.config.slippage_tolerance);
@@ -492,21 +492,20 @@ impl PortfolioRebalancer {
                     let adj = price.as_decimal() * (Decimal::ONE - self.config.slippage_tolerance);
                     Price::new(adj).unwrap_or(price)
                 }
-            };
-            (OrderType::Limit, Some(adjusted_price))
+            }
         };
 
         OrderRequest {
             symbol,
             side,
-            order_type,
             quantity,
             price: order_price,
             stop_price: None,
+            order_type: OrderType::Limit,
             time_in_force: TimeInForce::Gtc,
+            client_order_id: None,
             reduce_only: false,
             post_only: false,
-            client_order_id: None,
         }
     }
 

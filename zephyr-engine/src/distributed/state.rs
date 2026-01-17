@@ -177,7 +177,7 @@ impl OrderState {
             symbol: order.symbol.clone(),
             status: order.status,
             filled_quantity: order.filled_quantity,
-            avg_price: order.avg_price,
+            avg_price: Some(order.avg_price),
             updated_at: Timestamp::now(),
             version: 1,
             source_node: source_node.into(),
@@ -188,7 +188,7 @@ impl OrderState {
     pub fn update_from_order(&mut self, order: &Order) {
         self.status = order.status;
         self.filled_quantity = order.filled_quantity;
-        self.avg_price = order.avg_price;
+        self.avg_price = Some(order.avg_price);
         self.updated_at = Timestamp::now();
         self.version += 1;
     }

@@ -163,9 +163,9 @@ pub struct StrategyPluginConfig {
     #[serde(default)]
     pub path: Option<PathBuf>,
 
-    /// Strategy type (cta, hft, uft).
+    /// Strategy type (cta, hft, uft, sel).
     #[serde(default = "default_strategy_type")]
-    pub strategy_type: String,
+    pub strategy_type: zephyr_core::types::StrategyType,
 
     /// Whether to auto-start this strategy.
     #[serde(default)]
@@ -176,8 +176,8 @@ pub struct StrategyPluginConfig {
     pub config: serde_json::Value,
 }
 
-fn default_strategy_type() -> String {
-    "cta".to_string()
+fn default_strategy_type() -> zephyr_core::types::StrategyType {
+    zephyr_core::types::StrategyType::Cta
 }
 
 /// Exchange adapter plugin configuration.
